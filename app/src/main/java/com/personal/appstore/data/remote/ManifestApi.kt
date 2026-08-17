@@ -1,5 +1,6 @@
 package com.personal.appstore.data.remote
 
+import android.util.Log
 import com.personal.appstore.StoreConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -17,10 +18,13 @@ import java.io.IOException
 class ManifestHttpException(val code: Int) : IOException("витрина ответила HTTP $code")
 
 /**
- * Загрузка apps.json по raw-ссылке.
+ * Загрузка apps.json.
  *
- * raw.githubusercontent.com кэширует агрессивно, поэтому запрашиваем
- * без кэша: витрина должна показывать свежую версию сразу после релиза.
+ * raw.githubusercontent.com отдаёт файл через CDN с max-age=300, и этот кэш не
+ * пробивается ни заголовком no-cache, ни параметром в адресе: после релиза
+ * телефон до пяти минут видел бы старую витрину. Contents API отдаёт тот же
+ * файл с max-age=60, поэтому сначала идём туда, а raw остаётся запасным
+ * вариантом — в том числе если API упрётся в лимит запросов.
  */
 class ManifestApi(
     private val client: OkHttpClient,
@@ -49,10 +53,23 @@ class ManifestApi(
     }
 
     private fun requestOnce(url: String): String {
+        val apiUrl = contentsApiUrl(url)
+        if (apiUrl != null) {
+            try {
+                return get(apiUrl, accept = "application/vnd.github.raw")
+            } catch (e: IOException) {
+                // Лимит запросов или сбой API — не повод не показать витрину вовсе.
+                Log.i(TAG, "Contents API недоступен (${e.message}), беру raw-ссылку")
+            }
+        }
+        return get(url, accept = "application/json")
+    }
+
+    private fun get(url: String, accept: String): String {
         val request = Request.Builder()
             .url(url)
             .cacheControl(CacheControl.FORCE_NETWORK)
-            .header("Accept", "application/json")
+            .header("Accept", accept)
             .build()
 
         client.newCall(request).execute().use { response ->
@@ -61,5 +78,24 @@ class ManifestApi(
             }
             return response.body?.string() ?: throw IOException("пустой ответ витрины")
         }
+    }
+
+    /**
+     * `https://raw.githubusercontent.com/OWNER/REPO/BRANCH/apps.json`
+     * → `https://api.github.com/repos/OWNER/REPO/contents/apps.json?ref=BRANCH`
+     *
+     * null, если витрина лежит не на raw.githubusercontent.com.
+     */
+    internal fun contentsApiUrl(rawUrl: String): String? {
+        val match = RAW_URL_REGEX.matchEntire(rawUrl.trim()) ?: return null
+        val (owner, repo, branch, path) = match.destructured
+        return "https://api.github.com/repos/$owner/$repo/contents/$path?ref=$branch"
+    }
+
+    private companion object {
+        const val TAG = "ManifestApi"
+
+        val RAW_URL_REGEX =
+            Regex("https://raw\\.githubusercontent\\.com/([^/]+)/([^/]+)/([^/]+)/(.+)")
     }
 }
