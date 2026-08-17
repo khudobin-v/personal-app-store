@@ -24,16 +24,16 @@ class ManifestHttpException(val code: Int) : IOException("витрина отв�
  */
 class ManifestApi(
     private val client: OkHttpClient,
-    private val url: String,
     private val retries: Int = StoreConfig.NETWORK_RETRIES,
 ) {
 
-    suspend fun fetch(): String = withContext(Dispatchers.IO) {
+    /** [url] приходит из настроек: он может измениться без пересборки. */
+    suspend fun fetch(url: String): String = withContext(Dispatchers.IO) {
         var lastError: IOException? = null
 
         repeat(retries) { attempt ->
             try {
-                return@withContext requestOnce()
+                return@withContext requestOnce(url)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: IOException) {
@@ -48,7 +48,7 @@ class ManifestApi(
         throw lastError ?: IOException("не удалось загрузить манифест")
     }
 
-    private fun requestOnce(): String {
+    private fun requestOnce(url: String): String {
         val request = Request.Builder()
             .url(url)
             .cacheControl(CacheControl.FORCE_NETWORK)

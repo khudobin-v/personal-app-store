@@ -25,6 +25,7 @@ import com.personal.appstore.StoreApplication
 import com.personal.appstore.installer.InstallPermissions
 import com.personal.appstore.ui.screens.AppDetailsScreen
 import com.personal.appstore.ui.screens.AppListScreen
+import com.personal.appstore.ui.screens.SetupScreen
 import com.personal.appstore.ui.theme.PersonalAppStoreTheme
 
 class MainActivity : ComponentActivity() {
@@ -53,8 +54,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             PersonalAppStoreTheme {
                 val state by viewModel.uiState.collectAsStateWithLifecycle()
+                val setupState by viewModel.setupState.collectAsStateWithLifecycle()
                 val snackbarHostState = remember { SnackbarHostState() }
                 var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
+                var showSetup by rememberSaveable { mutableStateOf(false) }
 
                 LaunchedEffect(Unit) {
                     viewModel.events.collect { event ->
@@ -68,9 +71,28 @@ class MainActivity : ComponentActivity() {
 
                 val selected = state.items.firstOrNull { it.id == selectedId }
 
-                BackHandler(enabled = selected != null) { selectedId = null }
+                BackHandler(enabled = selected != null || showSetup) {
+                    if (showSetup) showSetup = false else selectedId = null
+                }
 
-                if (selected != null) {
+                if (showSetup) {
+                    SetupScreen(
+                        state = setupState,
+                        onBack = { showSetup = false },
+                        onLoginChange = viewModel::onLoginChange,
+                        onSearch = viewModel::searchStorefronts,
+                        onChoose = { url, login ->
+                            viewModel.chooseStorefront(url, login)
+                            showSetup = false
+                        },
+                        onManualUrlChange = viewModel::onManualUrlChange,
+                        onApplyManualUrl = {
+                            viewModel.applyManualUrl()
+                            showSetup = false
+                        },
+                        onReset = viewModel::resetStorefront,
+                    )
+                } else if (selected != null) {
                     AppDetailsScreen(
                         item = selected,
                         onBack = { selectedId = null },
@@ -83,6 +105,7 @@ class MainActivity : ComponentActivity() {
                         onRefresh = viewModel::refresh,
                         onPrimaryAction = viewModel::onPrimaryAction,
                         onOpenDetails = { selectedId = it.id },
+                        onOpenSetup = { showSetup = true },
                     )
                 }
             }

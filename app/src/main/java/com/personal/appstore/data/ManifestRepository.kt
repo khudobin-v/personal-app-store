@@ -42,6 +42,8 @@ sealed interface ManifestState {
 class ManifestRepository(
     private val api: ManifestApi,
     private val cache: ManifestCache,
+    /** Адрес витрины: настройка на устройстве важнее значения из сборки. */
+    private val manifestUrl: suspend () -> String,
     private val now: () -> Long = System::currentTimeMillis,
 ) {
 
@@ -68,7 +70,7 @@ class ManifestRepository(
         }
 
         try {
-            val raw = api.fetch()
+            val raw = api.fetch(manifestUrl())
             val manifest = ManifestParser.parse(raw)
             val fetchedAt = now()
             runCatching { cache.save(raw, fetchedAt) }

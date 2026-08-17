@@ -61,8 +61,9 @@ class ManifestRepositoryTest {
     }
 
     private fun repository(retries: Int = 1) = ManifestRepository(
-        api = ManifestApi(OkHttpClient(), server.url("/apps.json").toString(), retries = retries),
+        api = ManifestApi(OkHttpClient(), retries = retries),
         cache = cache,
+        manifestUrl = { server.url("/apps.json").toString() },
         now = { now },
     )
 

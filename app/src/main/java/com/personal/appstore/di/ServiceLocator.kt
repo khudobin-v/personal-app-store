@@ -1,9 +1,10 @@
 package com.personal.appstore.di
 
 import android.content.Context
-import com.personal.appstore.StoreConfig
 import com.personal.appstore.data.ManifestRepository
 import com.personal.appstore.data.local.DataStoreManifestCache
+import com.personal.appstore.data.local.SettingsStore
+import com.personal.appstore.data.remote.RepoDiscovery
 import com.personal.appstore.data.remote.ApkDownloader
 import com.personal.appstore.data.remote.ManifestApi
 import com.personal.appstore.domain.InstalledAppsProvider
@@ -32,10 +33,15 @@ class ServiceLocator(private val appContext: Context) {
             .build()
     }
 
+    val settingsStore: SettingsStore by lazy { SettingsStore(appContext) }
+
+    val repoDiscovery: RepoDiscovery by lazy { RepoDiscovery(okHttpClient) }
+
     val manifestRepository: ManifestRepository by lazy {
         ManifestRepository(
-            api = ManifestApi(okHttpClient, StoreConfig.manifestUrl),
+            api = ManifestApi(okHttpClient),
             cache = DataStoreManifestCache(appContext),
+            manifestUrl = { settingsStore.current().manifestUrl },
         )
     }
 

@@ -7,13 +7,28 @@ Kotlin · Jetpack Compose (Material 3) · minSdk 26 · targetSdk 36 · ручн�
 
 ## Адрес витрины
 
-Задаётся **в одном месте** — `MANIFEST_URL` в [`gradle.properties`](gradle.properties):
+Два способа, второй важнее первого:
 
-```properties
-MANIFEST_URL=https://raw.githubusercontent.com/<владелец>/app-store-manifest/main/apps.json
-```
+1. **Значение по умолчанию из сборки** — `MANIFEST_URL` в [`gradle.properties`](gradle.properties):
 
-Оттуда значение попадает в `BuildConfig.MANIFEST_URL` и в `StoreConfig`.
+   ```properties
+   MANIFEST_URL=https://raw.githubusercontent.com/<владелец>/app-store-manifest/main/apps.json
+   ```
+
+   Попадает в `BuildConfig.MANIFEST_URL` и в `StoreConfig.defaultManifestUrl`.
+
+2. **Настройка на устройстве** (шестерёнка в шапке или кнопка «Настроить
+   витрину» на экране ошибки). Вводится GitHub-логин, магазин сам обходит
+   публичные репозитории пользователя и предлагает те, где в корне лежит
+   разбираемый `apps.json`. Выбранный адрес хранится в DataStore и перекрывает
+   значение из сборки; «Вернуть значение из сборки» его сбрасывает.
+
+   Авторизация для этого не нужна: витрина публичная, хватает анонимного
+   GitHub API. Приватная витрина потребовала бы входа через GitHub — этого
+   пока нет.
+
+   Поиск: `RepoDiscovery` → `data/remote/RepoDiscovery.kt`,
+   хранение → `data/local/SettingsStore.kt`.
 
 ## Структура
 

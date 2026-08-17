@@ -9,7 +9,10 @@ import com.personal.appstore.StoreApplication
 import com.personal.appstore.StoreConfig
 import com.personal.appstore.data.ManifestRepository
 import com.personal.appstore.data.ManifestState
+import com.personal.appstore.data.local.SettingsStore
 import com.personal.appstore.data.remote.ApkDownloader
+import com.personal.appstore.data.remote.DiscoveredStorefront
+import com.personal.appstore.data.remote.RepoDiscovery
 import com.personal.appstore.data.remote.ChecksumMismatchException
 import com.personal.appstore.domain.AppStatus
 import com.personal.appstore.domain.AppStatusResolver
@@ -28,6 +31,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
@@ -60,6 +64,18 @@ data class StoreUiState(
     val lastUpdatedMillis: Long? = null,
 )
 
+/** Экран «где брать витрину»: поиск репозитория по GitHub-логину. */
+data class SetupState(
+    val login: String = "",
+    val manualUrl: String = "",
+    val isSearching: Boolean = false,
+    val results: List<DiscoveredStorefront> = emptyList(),
+    val error: String? = null,
+    val currentUrl: String = "",
+    val isCustom: Boolean = false,
+    val searched: Boolean = false,
+)
+
 /** Одноразовые события для Activity. */
 sealed interface StoreEvent {
     data class ShowMessage(val text: String) : StoreEvent
@@ -72,8 +88,13 @@ class StoreViewModel(
     private val installedApps: InstalledAppsProvider,
     private val downloader: ApkDownloader,
     private val installer: ApkInstaller,
+    private val settingsStore: SettingsStore,
+    private val repoDiscovery: RepoDiscovery,
     private val storePackageName: String = StoreConfig.storePackageName,
 ) : ViewModel() {
+
+    private val _setupState = MutableStateFlow(SetupState())
+    val setupState: StateFlow<SetupState> = _setupState.asStateFlow()
 
     private val downloads = MutableStateFlow<Map<String, DownloadState>>(emptyMap())
     private val isRefreshing = MutableStateFlow(false)
@@ -87,6 +108,17 @@ class StoreViewModel(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StoreUiState())
 
     init {
+        viewModelScope.launch {
+            settingsStore.settings.collect { settings ->
+                _setupState.update {
+                    it.copy(
+                        currentUrl = settings.manifestUrl,
+                        isCustom = settings.isCustom,
+                        login = it.login.ifEmpty { settings.githubLogin.orEmpty() },
+                    )
+                }
+            }
+        }
         viewModelScope.launch {
             repository.state.collect { state ->
                 if (state is ManifestState.Ready) {
@@ -117,6 +149,70 @@ class StoreViewModel(
         val state = repository.state.value
         if (state is ManifestState.Ready) {
             installedApps.refresh(state.manifest.apps.map { it.id })
+        }
+    }
+
+    fun onLoginChange(value: String) {
+        _setupState.update { it.copy(login = value, error = null) }
+    }
+
+    fun onManualUrlChange(value: String) {
+        _setupState.update { it.copy(manualUrl = value, error = null) }
+    }
+
+    /** Ищет витрину среди публичных репозиториев пользователя. */
+    fun searchStorefronts() {
+        val login = _setupState.value.login.trim()
+        if (login.isEmpty()) {
+            _setupState.update { it.copy(error = "введите GitHub-логин") }
+            return
+        }
+
+        viewModelScope.launch {
+            _setupState.update { it.copy(isSearching = true, error = null, results = emptyList()) }
+            try {
+                val found = repoDiscovery.discover(login)
+                _setupState.update {
+                    it.copy(
+                        isSearching = false,
+                        results = found,
+                        searched = true,
+                        error = if (found.isEmpty()) {
+                            "у $login нет публичного репозитория с apps.json"
+                        } else {
+                            null
+                        },
+                    )
+                }
+            } catch (e: Exception) {
+                _setupState.update {
+                    it.copy(isSearching = false, searched = true, error = e.message ?: "поиск не удался")
+                }
+            }
+        }
+    }
+
+    fun chooseStorefront(url: String, login: String?) {
+        viewModelScope.launch {
+            settingsStore.setManifestUrl(url, login)
+            _events.trySend(StoreEvent.ShowMessage("Витрина сохранена"))
+            refresh()
+        }
+    }
+
+    fun applyManualUrl() {
+        val url = _setupState.value.manualUrl.trim()
+        if (!url.startsWith("https://")) {
+            _setupState.update { it.copy(error = "адрес должен начинаться с https://") }
+            return
+        }
+        chooseStorefront(url, null)
+    }
+
+    fun resetStorefront() {
+        viewModelScope.launch {
+            settingsStore.clearManifestUrl()
+            refresh()
         }
     }
 
@@ -262,6 +358,8 @@ class StoreViewModel(
                     installedApps = app.locator.installedApps,
                     downloader = app.locator.apkDownloader,
                     installer = app.locator.apkInstaller,
+                    settingsStore = app.locator.settingsStore,
+                    repoDiscovery = app.locator.repoDiscovery,
                 )
             }
         }

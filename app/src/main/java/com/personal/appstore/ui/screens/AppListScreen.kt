@@ -8,8 +8,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -39,6 +44,7 @@ fun AppListScreen(
     onRefresh: () -> Unit,
     onPrimaryAction: (AppItem) -> Unit,
     onOpenDetails: (AppItem) -> Unit,
+    onOpenSetup: () -> Unit,
 ) {
     Scaffold(
         topBar = {
@@ -51,6 +57,11 @@ fun AppListScreen(
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onOpenSetup) {
+                        Icon(Icons.Filled.Settings, contentDescription = "Настройки витрины")
                     }
                 },
             )
@@ -66,7 +77,7 @@ fun AppListScreen(
         ) {
             when {
                 state.isLoading -> LoadingContent()
-                state.error != null -> ErrorContent(state.error, onRefresh)
+                state.error != null -> ErrorContent(state.error, onRefresh, onOpenSetup)
                 else -> Content(state, onPrimaryAction, onOpenDetails)
             }
         }
@@ -137,7 +148,7 @@ private fun EmptyContent() {
 }
 
 @Composable
-private fun ErrorContent(message: String, onRetry: () -> Unit) {
+private fun ErrorContent(message: String, onRetry: () -> Unit, onOpenSetup: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -153,5 +164,6 @@ private fun ErrorContent(message: String, onRetry: () -> Unit) {
             textAlign = TextAlign.Center,
         )
         Button(onClick = onRetry) { Text("Повторить") }
+        OutlinedButton(onClick = onOpenSetup) { Text("Настроить витрину") }
     }
 }

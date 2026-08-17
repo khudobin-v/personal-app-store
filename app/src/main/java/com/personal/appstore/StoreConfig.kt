@@ -8,8 +8,12 @@ package com.personal.appstore
  */
 object StoreConfig {
 
-    /** raw-ссылка на apps.json в публичном репозитории манифеста. */
-    val manifestUrl: String = BuildConfig.MANIFEST_URL
+    /**
+     * raw-ссылка на apps.json по умолчанию (из gradle.properties).
+     * Пользователь может переопределить её в настройках: магазин умеет искать
+     * витрину по GitHub-логину, см. SettingsStore и RepoDiscovery.
+     */
+    val defaultManifestUrl: String = BuildConfig.MANIFEST_URL
 
     /** packageName самого магазина — для баннера самообновления. */
     val storePackageName: String = BuildConfig.APPLICATION_ID
