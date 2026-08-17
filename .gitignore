@@ -1,0 +1,12 @@
+*.iml
+.gradle/
+build/
+local.properties
+.idea/
+.kotlin/
+.DS_Store
+captures/
+
+# release-ключи живут только у вас и в GitHub Secrets
+*.keystore
+*.jks

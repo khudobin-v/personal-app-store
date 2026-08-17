@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Скачанные APK лежат только здесь: cacheDir/apk -->
+    <cache-path
+        name="apk"
+        path="apk/" />
+</paths>

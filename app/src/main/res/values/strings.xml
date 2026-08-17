@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">Мой магазин</string>
+
+    <string name="notification_channel_updates">Обновления приложений</string>
+    <string name="notification_channel_updates_description">Уведомления о новых версиях приложений из личного магазина</string>
+</resources>
