@@ -1,3 +1,7 @@
+# Версии зафиксированы под compileSdk 36 (актуальный стабильный Android) и AGP 8.13.
+# Более свежие androidx/compose (core 1.19, compose 1.12, lifecycle 2.11, okhttp 5.5)
+# требуют compileSdk 37 и AGP 9.1+ — переходить на них имеет смысл вместе с bump
+# compileSdk/targetSdk и проверкой, что нужная платформа есть на CI-раннере.
 [versions]
 agp = "8.13.1"
 kotlin = "2.3.20"
