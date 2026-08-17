@@ -157,10 +157,22 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          gh release create "${{ steps.tag.outputs.tag }}" \
-            "${{ steps.apk.outputs.path }}" \
-            --title "${{ steps.apk.outputs.label }} ${{ steps.apk.outputs.version_name }}" \
-            --notes-file "${{ steps.tag.outputs.changelog_file }}"
+          TAG="${{ steps.tag.outputs.tag }}"
+
+          # Release мог остаться от упавшего прогона (например, не хватило прав
+          # на манифест): тогда перезаливаем ассет, а не падаем на «уже существует».
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG уже существует — обновляю ассет и описание"
+            gh release upload "$TAG" "${{ steps.apk.outputs.path }}" --clobber
+            gh release edit "$TAG" \
+              --title "${{ steps.apk.outputs.label }} ${{ steps.apk.outputs.version_name }}" \
+              --notes-file "${{ steps.tag.outputs.changelog_file }}"
+          else
+            gh release create "$TAG" \
+              "${{ steps.apk.outputs.path }}" \
+              --title "${{ steps.apk.outputs.label }} ${{ steps.apk.outputs.version_name }}" \
+              --notes-file "${{ steps.tag.outputs.changelog_file }}"
+          fi
 
       - name: Checkout manifest repository
         uses: actions/checkout@v4
