@@ -27,12 +27,12 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0 # нужны объекты тегов, чтобы прочитать changelog
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -175,7 +175,7 @@ jobs:
           fi
 
       - name: Checkout manifest repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: ${{ env.MANIFEST_REPO }}
           token: ${{ secrets.MANIFEST_PAT }}
