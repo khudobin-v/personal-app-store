@@ -16,167 +16,158 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * Та же система оформления, что в веб-панели (см. linear.app-DESIGN.md):
- * канвас #010102, лестница поверхностей, лавандовый акцент и волосяные рамки.
+ * Оформление по присланному референсу: светлый пастельный фон, крупные мягкие
+ * карточки, тёмная «пилюля» главного действия и очень крупные заголовки.
  *
- * Динамические цвета Android намеренно выключены: в системе один акцент, и
- * подмена его обоями сломала бы единство с панелью.
+ * Каждому приложению достаётся своя пастельная подложка — как плитки коллекции
+ * в референсе. Цвет выводится из packageName, чтобы не зависеть от порядка в
+ * витрине и не меняться между запусками.
  */
 
-private val Lavender = Color(0xFF5E6AD2)
-private val LavenderHover = Color(0xFF828FFF)
+private val Ink = Color(0xFF1B1B1F)
+private val InkSoft = Color(0xFF6B6B75)
+private val Canvas = Color(0xFFFBF8F7)
+private val Coral = Color(0xFFF2A9A0)
+private val CoralDeep = Color(0xFFE0897E)
 
-// Тёмная — основная.
-private val Canvas = Color(0xFF010102)
-private val Surface1 = Color(0xFF0F1011)
-private val Surface2 = Color(0xFF141516)
-private val Hairline = Color(0xFF23252A)
-private val Ink = Color(0xFFF7F8F8)
-private val InkMuted = Color(0xFFD0D6E0)
-private val InkSubtle = Color(0xFF8A8F98)
-private val Danger = Color(0xFFE5484D)
+private val CanvasDark = Color(0xFF141316)
+private val SurfaceDark = Color(0xFF1E1D21)
+private val InkDark = Color(0xFFF6F4F3)
+private val InkSoftDark = Color(0xFFA3A0A8)
 
-// Светлая — та же система, вывернутая.
-private val CanvasLight = Color(0xFFFBFBFC)
-private val Surface1Light = Color(0xFFFFFFFF)
-private val Surface2Light = Color(0xFFF4F5F7)
-private val HairlineLight = Color(0xFFE4E6EA)
-private val InkLight = Color(0xFF0D0E10)
-private val InkMutedLight = Color(0xFF3D424B)
-private val InkSubtleLight = Color(0xFF6B7280)
-private val DangerLight = Color(0xFFC62A2F)
-
-private val DarkColors = darkColorScheme(
-    primary = Lavender,
-    onPrimary = Color.White,
-    primaryContainer = Surface2,
-    onPrimaryContainer = Ink,
-    secondary = LavenderHover,
-    onSecondary = Color.White,
-    secondaryContainer = Surface2,
-    onSecondaryContainer = InkMuted,
-    background = Canvas,
-    onBackground = Ink,
-    surface = Canvas,
-    onSurface = Ink,
-    surfaceVariant = Surface1,
-    onSurfaceVariant = InkSubtle,
-    surfaceContainer = Surface1,
-    surfaceContainerHigh = Surface2,
-    outline = Hairline,
-    outlineVariant = Hairline,
-    error = Danger,
-    onError = Color.White,
+/** Пастельные подложки карточек: тон выбирается по packageName. */
+val CardTints = listOf(
+    Color(0xFFF7D9D4),
+    Color(0xFFDDE9CF),
+    Color(0xFFF6E3C5),
+    Color(0xFFD6E4F0),
+    Color(0xFFE8DAF2),
+    Color(0xFFCFE9E4),
 )
+
+fun tintFor(id: String): Color = CardTints[(id.hashCode().let { if (it == Int.MIN_VALUE) 0 else kotlin.math.abs(it) }) % CardTints.size]
 
 private val LightColors = lightColorScheme(
-    primary = Lavender,
+    primary = Ink,
     onPrimary = Color.White,
-    primaryContainer = Surface2Light,
-    onPrimaryContainer = InkLight,
-    secondary = Lavender,
-    onSecondary = Color.White,
-    secondaryContainer = Surface2Light,
-    onSecondaryContainer = InkMutedLight,
-    background = CanvasLight,
-    onBackground = InkLight,
-    surface = CanvasLight,
-    onSurface = InkLight,
-    surfaceVariant = Surface1Light,
-    onSurfaceVariant = InkSubtleLight,
-    surfaceContainer = Surface1Light,
-    surfaceContainerHigh = Surface2Light,
-    outline = HairlineLight,
-    outlineVariant = HairlineLight,
-    error = DangerLight,
+    primaryContainer = Coral,
+    onPrimaryContainer = Ink,
+    secondary = Coral,
+    onSecondary = Ink,
+    secondaryContainer = Color(0xFFF7D9D4),
+    onSecondaryContainer = Ink,
+    background = Canvas,
+    onBackground = Ink,
+    surface = Color.White,
+    onSurface = Ink,
+    surfaceVariant = Color(0xFFF1ECEA),
+    onSurfaceVariant = InkSoft,
+    surfaceContainer = Color.White,
+    surfaceContainerHigh = Color(0xFFF4EFED),
+    outline = Color(0xFFE6DFDC),
+    outlineVariant = Color(0xFFEFE9E6),
+    error = Color(0xFFB3352F),
     onError = Color.White,
 )
 
-/**
- * Шкала из спецификации: отрицательный трекинг на крупном, ноль на мелком.
- * Собственный шрифт Linear не распространяется, поэтому системный гротеск —
- * ровно та замена, которую спецификация и предлагает на устройствах Apple/Android.
- */
+private val DarkColors = darkColorScheme(
+    primary = InkDark,
+    onPrimary = Ink,
+    primaryContainer = CoralDeep,
+    onPrimaryContainer = Ink,
+    secondary = Coral,
+    onSecondary = Ink,
+    secondaryContainer = Color(0xFF3A2F2E),
+    onSecondaryContainer = InkDark,
+    background = CanvasDark,
+    onBackground = InkDark,
+    surface = SurfaceDark,
+    onSurface = InkDark,
+    surfaceVariant = Color(0xFF272529),
+    onSurfaceVariant = InkSoftDark,
+    surfaceContainer = SurfaceDark,
+    surfaceContainerHigh = Color(0xFF272529),
+    outline = Color(0xFF333136),
+    outlineVariant = Color(0xFF2A282D),
+    error = Color(0xFFE98B85),
+    onError = Ink,
+)
+
+/** Крупные заголовки с плотным трекингом — как в референсе. */
 private val StoreTypography = Typography(
-    headlineSmall = TextStyle(
+    displaySmall = TextStyle(
         fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 24.sp,
-        lineHeight = 29.sp,
-        letterSpacing = (-0.6).sp,
+        fontWeight = FontWeight.Bold,
+        fontSize = 34.sp,
+        lineHeight = 38.sp,
+        letterSpacing = (-1.0).sp,
+    ),
+    headlineMedium = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Bold,
+        fontSize = 28.sp,
+        lineHeight = 32.sp,
+        letterSpacing = (-0.8).sp,
     ),
     titleLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 20.sp,
-        lineHeight = 25.sp,
-        letterSpacing = (-0.4).sp,
+        fontWeight = FontWeight.Bold,
+        fontSize = 22.sp,
+        lineHeight = 27.sp,
+        letterSpacing = (-0.5).sp,
     ),
     titleMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Medium,
-        fontSize = 16.sp,
-        lineHeight = 22.sp,
-        letterSpacing = (-0.2).sp,
-    ),
-    titleSmall = TextStyle(
-        fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Medium,
-        fontSize = 14.sp,
-        lineHeight = 20.sp,
-        letterSpacing = 0.sp,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 18.sp,
+        lineHeight = 23.sp,
+        letterSpacing = (-0.3).sp,
     ),
     bodyLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
         lineHeight = 24.sp,
-        letterSpacing = (-0.05).sp,
     ),
     bodyMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
         lineHeight = 21.sp,
-        letterSpacing = 0.sp,
     ),
     bodySmall = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Normal,
         fontSize = 13.sp,
         lineHeight = 19.sp,
-        letterSpacing = 0.sp,
     ),
     labelLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Medium,
-        fontSize = 14.sp,
-        lineHeight = 17.sp,
-        letterSpacing = 0.sp,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 15.sp,
+        lineHeight = 19.sp,
     ),
     labelMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Medium,
         fontSize = 13.sp,
         lineHeight = 17.sp,
-        letterSpacing = 0.4.sp, // eyebrow: единственная положительная разрядка
     ),
     labelSmall = TextStyle(
         fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Normal,
+        fontWeight = FontWeight.Medium,
         fontSize = 12.sp,
-        lineHeight = 17.sp,
-        letterSpacing = 0.sp,
+        lineHeight = 16.sp,
     ),
 )
 
-/** Скругления: 8 у кнопок, 12 у карточек, 16 у крупных панелей. Никаких «таблеток». */
+/** Мягкая геометрия: карточки 24, кнопки-пилюли отдельно в компонентах. */
 private val StoreShapes = Shapes(
-    extraSmall = RoundedCornerShape(4.dp),
-    small = RoundedCornerShape(6.dp),
-    medium = RoundedCornerShape(8.dp),
-    large = RoundedCornerShape(12.dp),
-    extraLarge = RoundedCornerShape(16.dp),
+    extraSmall = RoundedCornerShape(10.dp),
+    small = RoundedCornerShape(14.dp),
+    medium = RoundedCornerShape(18.dp),
+    large = RoundedCornerShape(24.dp),
+    extraLarge = RoundedCornerShape(28.dp),
 )
 
 @Composable
