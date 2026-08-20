@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -86,9 +85,10 @@ private fun StatusButton(item: AppItem, onClick: () -> Unit) {
             OutlinedButton(onClick = onClick) { Text("Повторить") }
 
         is DownloadState.Idle -> when (item.status) {
+            // Акцент — только на действии, которое что-то ставит на устройство.
             is AppStatus.NotInstalled -> Button(onClick = onClick) { Text("Установить") }
             is AppStatus.UpdateAvailable -> Button(onClick = onClick) { Text("Обновить") }
-            else -> FilledTonalButton(onClick = onClick) { Text("Открыть") }
+            else -> OutlinedButton(onClick = onClick) { Text("Открыть") }
         }
     }
 }
