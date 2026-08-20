@@ -52,6 +52,15 @@ fun AppRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                item.app.author?.let { author ->
+                    Text(
+                        text = "от $author",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
                 Text(
                     text = subtitle(item),
                     style = MaterialTheme.typography.bodySmall,

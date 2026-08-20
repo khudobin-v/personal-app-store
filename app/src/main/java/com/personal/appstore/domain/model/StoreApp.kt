@@ -18,6 +18,8 @@ data class StoreApp(
     val id: String,
     val name: String,
     val iconUrl: String?,
+    /** Автор публикации: показывается в списке под названием. */
+    val author: String?,
     val latest: AppRelease,
     val history: List<AppRelease>,
 )

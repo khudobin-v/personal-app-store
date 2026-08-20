@@ -72,6 +72,7 @@ object ManifestParser {
             id = dto.id,
             name = dto.name,
             iconUrl = dto.iconUrl?.takeIf { it.startsWith("https://") },
+            author = dto.publishedBy?.trim()?.takeIf { it.isNotEmpty() && it != "ci" },
             latest = latest,
             history = history,
         )

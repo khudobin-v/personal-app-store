@@ -168,6 +168,18 @@ class ManifestParserTest {
     }
 
     @Test
+    fun `автор публикации попадает в модель`() {
+        val json = manifest(app()).replace("\"changelog\":", "\"publishedBy\": \"ivan\", \"changelog\":")
+        assertEquals("ivan", ManifestParser.parse(json).apps.first().author)
+    }
+
+    @Test
+    fun `публикации из CI автором не считаются`() {
+        val json = manifest(app()).replace("\"changelog\":", "\"publishedBy\": \"ci\", \"changelog\":")
+        assertNull(ManifestParser.parse(json).apps.first().author)
+    }
+
+    @Test
     fun `не-https иконка игнорируется`() {
         val json = manifest(app()).replace("https://example.org/icon.png", "http://example.org/icon.png")
         assertNull(ManifestParser.parse(json).apps.first().iconUrl)

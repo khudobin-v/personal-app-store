@@ -31,6 +31,8 @@ data class AppDto(
     val apkSizeBytes: Long,
     val changelog: String = "",
     val releasedAt: String? = null,
+    /** Кто опубликовал последнюю версию: логин издателя либо 'ci'. */
+    val publishedBy: String? = null,
     val versions: List<VersionDto> = emptyList(),
 )
 
