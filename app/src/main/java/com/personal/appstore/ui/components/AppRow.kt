@@ -30,14 +30,10 @@ import com.personal.appstore.ui.AppItem
 import com.personal.appstore.ui.Format
 import com.personal.appstore.ui.theme.tintFor
 
-// Подложки карточек светлые всегда, поэтому текст на них тёмный в любой теме.
-private val OnTint = Color(0xFF1B1B1F)
-private val OnTintSoft = Color(0xFF5B5B66)
-
 /**
- * Карточка приложения: пастельная подложка, крупная иконка, имя, автор и
- * плитки с версией и размером — как плитки коллекции в референсе.
- * Действие — «пилюля» справа: тёмная для установки, светлая для запуска.
+ * Карточка приложения: подложка в тон иконке, имя, автор и плитки с версией и
+ * размером. Действие — «пилюля» справа: заливная для установки, лёгкая для
+ * запуска.
  */
 @Composable
 fun AppRow(
@@ -46,103 +42,112 @@ fun AppRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val background = MaterialTheme.colorScheme.background
+    // Половина основного цвета иконки. Иконки может не быть — тогда остаётся
+    // пастельная подложка по packageName, как раньше.
+    val accent = rememberIconAccent(item.app.iconUrl, fallback = tintFor(item.app.id))
+    val tint = accent.asBannerTint(background)
+    val ink = tint.readableInk()
+    val inkSoft = ink.copy(alpha = 0.72f)
+
     Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .clip(MaterialTheme.shapes.large)
-            .background(tintFor(item.app.id))
+            .background(tint)
             .clickable(onClick = onClick)
-            .padding(16.dp),
+            .padding(14.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            AppIcon(iconUrl = item.app.iconUrl, name = item.app.name, size = 64.dp)
+            AppIcon(iconUrl = item.app.iconUrl, name = item.app.name, size = 56.dp)
 
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(horizontal = 14.dp),
+                    .padding(horizontal = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
                 Text(
                     text = item.app.name,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = OnTint,
-                    maxLines = 1,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = ink,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
                 item.app.author?.let { author ->
                     Text(
                         text = "от $author",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = OnTintSoft,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = inkSoft,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Chip(text = item.app.latest.versionName)
-                    Chip(text = Format.bytes(item.app.latest.apkSizeBytes))
-                }
+                Text(
+                    text = "${item.app.latest.versionName} · ${Format.bytes(item.app.latest.apkSizeBytes)}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = inkSoft,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
 
-            StatusAction(item = item, onClick = onPrimaryAction)
+            StatusAction(item = item, onClick = onPrimaryAction, ink = ink, inkSoft = inkSoft)
         }
 
-        StatusLine(item)
+        StatusLine(item = item, inkSoft = inkSoft, ink = ink)
     }
 }
 
-/** Полупрозрачная плитка поверх подложки — версия, размер. */
 @Composable
-private fun Chip(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelSmall,
-        color = OnTint,
-        modifier = Modifier
-            .clip(RoundedCornerShape(50))
-            .background(Color.White.copy(alpha = 0.55f))
-            .padding(horizontal = 9.dp, vertical = 3.dp),
-    )
-}
-
-@Composable
-private fun StatusAction(item: AppItem, onClick: () -> Unit) {
+private fun StatusAction(
+    item: AppItem,
+    onClick: () -> Unit,
+    ink: Color,
+    inkSoft: Color,
+) {
     when (item.download) {
         is DownloadState.Downloading, is DownloadState.Verifying ->
-            CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp, color = OnTint)
+            CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp, color = ink)
 
         is DownloadState.Installing ->
-            Text("Установка…", style = MaterialTheme.typography.labelMedium, color = OnTintSoft)
+            Text("Установка…", style = MaterialTheme.typography.labelSmall, color = inkSoft)
 
-        is DownloadState.Failed -> PillButton(text = "Повторить", onClick = onClick)
+        is DownloadState.Failed -> PillButton("Повторить", onClick, ink)
 
         is DownloadState.Idle -> when (item.status) {
-            is AppStatus.NotInstalled -> PillButton(text = "Установить", onClick = onClick)
-            is AppStatus.UpdateAvailable -> PillButton(text = "Обновить", onClick = onClick)
-            else -> PillButton(text = "Открыть", onClick = onClick, filled = false)
+            is AppStatus.NotInstalled -> PillButton("Установить", onClick, ink)
+            is AppStatus.UpdateAvailable -> PillButton("Обновить", onClick, ink)
+            else -> PillButton("Открыть", onClick, ink, filled = false)
         }
     }
 }
 
 @Composable
-private fun PillButton(text: String, onClick: () -> Unit, filled: Boolean = true) {
+private fun PillButton(
+    text: String,
+    onClick: () -> Unit,
+    ink: Color,
+    filled: Boolean = true,
+) {
     Button(
         onClick = onClick,
         shape = RoundedCornerShape(50),
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (filled) OnTint else Color.White.copy(alpha = 0.75f),
-            contentColor = if (filled) Color.White else OnTint,
+            // Цвет текста берём контрастом к самой заливке, а не цветом
+            // карточки — иначе надпись уходит в тон подложки.
+            containerColor = if (filled) ink else ink.copy(alpha = 0.14f),
+            contentColor = if (filled) ink.readableInk() else ink,
         ),
-        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 10.dp),
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 9.dp),
     ) {
-        Text(text, style = MaterialTheme.typography.labelLarge)
+        Text(text, style = MaterialTheme.typography.labelMedium)
     }
 }
 
 @Composable
-private fun StatusLine(item: AppItem) {
+private fun StatusLine(item: AppItem, inkSoft: Color, ink: Color) {
     when (val download = item.download) {
         is DownloadState.Downloading -> {
             val fraction = download.fraction
@@ -151,14 +156,14 @@ private fun StatusLine(item: AppItem) {
                     LinearProgressIndicator(
                         progress = { fraction },
                         modifier = Modifier.fillMaxWidth(),
-                        color = OnTint,
-                        trackColor = Color.White.copy(alpha = 0.5f),
+                        color = ink,
+                        trackColor = ink.copy(alpha = 0.2f),
                     )
                 } else {
                     LinearProgressIndicator(
                         modifier = Modifier.fillMaxWidth(),
-                        color = OnTint,
-                        trackColor = Color.White.copy(alpha = 0.5f),
+                        color = ink,
+                        trackColor = ink.copy(alpha = 0.2f),
                     )
                 }
             }
@@ -167,7 +172,7 @@ private fun StatusLine(item: AppItem) {
         is DownloadState.Verifying -> Text(
             text = "Проверка контрольной суммы…",
             style = MaterialTheme.typography.labelSmall,
-            color = OnTintSoft,
+            color = inkSoft,
             modifier = Modifier.padding(top = 10.dp),
         )
 
@@ -184,7 +189,7 @@ private fun StatusLine(item: AppItem) {
                 Text(
                     text = "стоит ${status.installed.versionName} · доступно ${item.app.latest.versionName}",
                     style = MaterialTheme.typography.labelSmall,
-                    color = OnTintSoft,
+                    color = inkSoft,
                     modifier = Modifier.padding(top = 10.dp),
                 )
             }

@@ -121,8 +121,8 @@ private fun Content(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(
-                        text = "Мой магазин",
-                        style = MaterialTheme.typography.titleLarge,
+                        text = "Все приложения",
+                        style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.weight(1f),
                     )
                     Text(
