@@ -25,6 +25,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -46,6 +47,7 @@ import com.personal.appstore.ui.SetupState
 fun SetupScreen(
     state: SetupState,
     onBack: () -> Unit,
+    onAlwaysShowOnboardingChange: (Boolean) -> Unit,
     onLoginChange: (String) -> Unit,
     onSearch: () -> Unit,
     onChoose: (url: String, login: String) -> Unit,
@@ -56,7 +58,7 @@ fun SetupScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Витрина") },
+                title = { Text("Настройки") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
@@ -178,6 +180,51 @@ fun SetupScreen(
                     )
                     Button(onClick = onApplyManualUrl) { Text("Сохранить") }
                 }
+            }
+
+            DeveloperModeCard(
+                alwaysShowOnboarding = state.alwaysShowOnboarding,
+                onAlwaysShowOnboardingChange = onAlwaysShowOnboardingChange,
+            )
+        }
+    }
+}
+
+/** Раздел для отладки оформления: сюда складываем переключатели «для себя». */
+@Composable
+private fun DeveloperModeCard(
+    alwaysShowOnboarding: Boolean,
+    onAlwaysShowOnboardingChange: (Boolean) -> Unit,
+) {
+    Card {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text("Режим разработчика", style = MaterialTheme.typography.titleSmall)
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onAlwaysShowOnboardingChange(!alwaysShowOnboarding) },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Показывать onboarding при каждом запуске",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        text = "Иначе приветственный экран появляется только при первом запуске.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = alwaysShowOnboarding,
+                    onCheckedChange = onAlwaysShowOnboardingChange,
+                )
             }
         }
     }

@@ -3,6 +3,7 @@ package com.personal.appstore.data.local
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -27,6 +28,10 @@ class SettingsStore(private val context: Context) {
         val githubLogin: String?,
         /** true, если адрес выбран пользователем, а не взят из сборки. */
         val isCustom: Boolean,
+        /** Приветственный экран уже показывали хотя бы раз. */
+        val onboardingSeen: Boolean = false,
+        /** Режим разработчика: показывать онбординг при каждом запуске. */
+        val alwaysShowOnboarding: Boolean = false,
     )
 
     val settings: Flow<Settings> = context.settingsDataStore.data.map { prefs ->
@@ -35,6 +40,8 @@ class SettingsStore(private val context: Context) {
             manifestUrl = custom ?: StoreConfig.defaultManifestUrl,
             githubLogin = prefs[KEY_GITHUB_LOGIN],
             isCustom = custom != null,
+            onboardingSeen = prefs[KEY_ONBOARDING_SEEN] == true,
+            alwaysShowOnboarding = prefs[KEY_ALWAYS_SHOW_ONBOARDING] == true,
         )
     }
 
@@ -54,8 +61,18 @@ class SettingsStore(private val context: Context) {
         }
     }
 
+    suspend fun setOnboardingSeen() {
+        context.settingsDataStore.edit { prefs -> prefs[KEY_ONBOARDING_SEEN] = true }
+    }
+
+    suspend fun setAlwaysShowOnboarding(enabled: Boolean) {
+        context.settingsDataStore.edit { prefs -> prefs[KEY_ALWAYS_SHOW_ONBOARDING] = enabled }
+    }
+
     private companion object {
         val KEY_MANIFEST_URL = stringPreferencesKey("manifest_url")
         val KEY_GITHUB_LOGIN = stringPreferencesKey("github_login")
+        val KEY_ONBOARDING_SEEN = booleanPreferencesKey("onboarding_seen")
+        val KEY_ALWAYS_SHOW_ONBOARDING = booleanPreferencesKey("always_show_onboarding")
     }
 }

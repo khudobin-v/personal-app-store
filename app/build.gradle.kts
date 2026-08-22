@@ -18,8 +18,8 @@ android {
         targetSdk = 36
 
         // Поднимайте на каждый релиз: конвейер отклонит повтор versionCode.
-        versionCode = 6
-        versionName = "1.4.0"
+        versionCode = 7
+        versionName = "1.5.0"
 
         // Единственный источник адреса витрины — MANIFEST_URL в gradle.properties.
         val manifestUrl = providers.gradleProperty("MANIFEST_URL").get()

@@ -74,6 +74,17 @@ data class SetupState(
     val currentUrl: String = "",
     val isCustom: Boolean = false,
     val searched: Boolean = false,
+    /** Режим разработчика: показывать онбординг при каждом запуске. */
+    val alwaysShowOnboarding: Boolean = false,
+)
+
+/**
+ * Что показывать на старте. Пока настройки не прочитаны (`decided == false`),
+ * не рисуем ни онбординг, ни список — иначе экран мигнёт.
+ */
+data class OnboardingUiState(
+    val decided: Boolean = false,
+    val visible: Boolean = false,
 )
 
 /** Одноразовые события для Activity. */
@@ -96,6 +107,21 @@ class StoreViewModel(
     private val _setupState = MutableStateFlow(SetupState())
     val setupState: StateFlow<SetupState> = _setupState.asStateFlow()
 
+    /** Онбординг закрыли в этом запуске — второй раз за сессию не показываем. */
+    private val onboardingDismissed = MutableStateFlow(false)
+
+    val onboarding: StateFlow<OnboardingUiState> =
+        combine(settingsStore.settings, onboardingDismissed) { settings, dismissed ->
+            OnboardingUiState(
+                decided = true,
+                visible = shouldShowOnboarding(
+                    seen = settings.onboardingSeen,
+                    always = settings.alwaysShowOnboarding,
+                    dismissed = dismissed,
+                ),
+            )
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, OnboardingUiState())
+
     private val downloads = MutableStateFlow<Map<String, DownloadState>>(emptyMap())
     private val isRefreshing = MutableStateFlow(false)
     private val jobs = mutableMapOf<String, Job>()
@@ -115,6 +141,7 @@ class StoreViewModel(
                         currentUrl = settings.manifestUrl,
                         isCustom = settings.isCustom,
                         login = it.login.ifEmpty { settings.githubLogin.orEmpty() },
+                        alwaysShowOnboarding = settings.alwaysShowOnboarding,
                     )
                 }
             }
@@ -150,6 +177,16 @@ class StoreViewModel(
         if (state is ManifestState.Ready) {
             installedApps.refresh(state.manifest.apps.map { it.id })
         }
+    }
+
+    /** Кнопка «К приложениям!»: закрываем онбординг и запоминаем, что его видели. */
+    fun completeOnboarding() {
+        onboardingDismissed.value = true
+        viewModelScope.launch { settingsStore.setOnboardingSeen() }
+    }
+
+    fun setAlwaysShowOnboarding(enabled: Boolean) {
+        viewModelScope.launch { settingsStore.setAlwaysShowOnboarding(enabled) }
     }
 
     fun onLoginChange(value: String) {
@@ -350,6 +387,14 @@ class StoreViewModel(
     }
 
     companion object {
+        /**
+         * Онбординг показываем при первом запуске, а с включённым режимом
+         * разработчика — при каждом. `dismissed` гасит его до конца сессии,
+         * чтобы возврат из настроек не выкидывал на приветствие.
+         */
+        fun shouldShowOnboarding(seen: Boolean, always: Boolean, dismissed: Boolean): Boolean =
+            !dismissed && (!seen || always)
+
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val app = this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as StoreApplication

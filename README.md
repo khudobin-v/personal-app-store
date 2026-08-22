@@ -44,9 +44,36 @@ app/src/main/java/com/personal/appstore/
 │   └── remote/             ManifestApi (ретраи), ApkDownloader (прогресс + sha256)
 ├── domain/                 статусы «Установить/Обновить/Открыть», установленные пакеты
 ├── installer/              PackageInstaller.Session + запасной путь через FileProvider
-├── ui/                     Compose: список, детали, баннеры, ViewModel
+├── ui/                     Compose: онбординг, список, детали, настройки, ViewModel
 └── worker/                 периодическая проверка обновлений + уведомления
 ```
+
+## Онбординг и режим разработчика
+
+При первом запуске показывается приветственный экран `OnboardingScreen`:
+коллаж дроидов, заголовок и кнопка «К приложениям!». Флаг «уже видели» лежит в
+`SettingsStore` рядом с адресом витрины.
+
+Коллаж — одна картинка `res/drawable-nodpi/onboarding_collage.webp`. Исходник
+(5608 × 4488, 10 МБ PNG) уменьшен до 1440 px по ширине и пережат в webp (235 КБ):
+в APK десятимегабайтный PNG класть нельзя, а 1440 px хватает и на xxhdpi.
+Показывается с запасом по ширине (`CollageZoom`), поэтому крайние фигурки
+подрезаются краем экрана, а низ гасится градиентом в фон.
+
+В настройках (шестерёнка) есть раздел «Режим разработчика» с тумблером
+«Показывать onboarding при каждом запуске» — чтобы смотреть экран, не сбрасывая
+данные приложения. Внутри одного запуска онбординг всё равно показывается один
+раз: закрыли — до перезапуска не возвращается.
+
+## Шрифт
+
+Golos Text, вариативный (ось `wght`), одним файлом `res/font/golos_text.ttf` —
+скачан из [google/fonts](https://github.com/google/fonts/tree/main/ofl/golostext),
+лицензия SIL OFL 1.1 лежит в [`licenses/golos-text-OFL.txt`](licenses/golos-text-OFL.txt).
+Семейство собирается в `ui/theme/Theme.kt`: Compose сам инстанцирует Regular,
+Medium, SemiBold и Bold из одного файла (вариативные шрифты работают с API 26,
+это наш minSdk). Семейство проставлено всем стилям `Typography`, включая те,
+что мы не переопределяли.
 
 ## Что гарантирует клиент
 
@@ -71,6 +98,6 @@ app/src/main/java/com/personal/appstore/
 
 ```bash
 ./gradlew assembleDebug
-./gradlew testDebugUnitTest     # 40 юнит-тестов
+./gradlew testDebugUnitTest     # 50 юнит-тестов
 ./release.sh 1.1.0 "Что нового" # публикация новой версии магазина
 ```

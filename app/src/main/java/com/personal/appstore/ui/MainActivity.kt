@@ -12,19 +12,24 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.personal.appstore.StoreApplication
 import com.personal.appstore.installer.InstallPermissions
 import com.personal.appstore.ui.screens.AppDetailsScreen
 import com.personal.appstore.ui.screens.AppListScreen
+import com.personal.appstore.ui.screens.OnboardingScreen
 import com.personal.appstore.ui.screens.SetupScreen
 import com.personal.appstore.ui.theme.PersonalAppStoreTheme
 
@@ -55,6 +60,7 @@ class MainActivity : ComponentActivity() {
             PersonalAppStoreTheme {
                 val state by viewModel.uiState.collectAsStateWithLifecycle()
                 val setupState by viewModel.setupState.collectAsStateWithLifecycle()
+                val onboarding by viewModel.onboarding.collectAsStateWithLifecycle()
                 val snackbarHostState = remember { SnackbarHostState() }
                 var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
                 var showSetup by rememberSaveable { mutableStateOf(false) }
@@ -71,14 +77,23 @@ class MainActivity : ComponentActivity() {
 
                 val selected = state.items.firstOrNull { it.id == selectedId }
 
-                BackHandler(enabled = selected != null || showSetup) {
+                BackHandler(enabled = !onboarding.visible && (selected != null || showSetup)) {
                     if (showSetup) showSetup = false else selectedId = null
                 }
 
-                if (showSetup) {
+                if (!onboarding.decided) {
+                    // Настройки ещё читаются — держим пустой фон, чтобы не мигать экранами.
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background,
+                    ) {}
+                } else if (onboarding.visible) {
+                    OnboardingScreen(onStart = viewModel::completeOnboarding)
+                } else if (showSetup) {
                     SetupScreen(
                         state = setupState,
                         onBack = { showSetup = false },
+                        onAlwaysShowOnboardingChange = viewModel::setAlwaysShowOnboarding,
                         onLoginChange = viewModel::onLoginChange,
                         onSearch = viewModel::searchStorefronts,
                         onChoose = { url, login ->

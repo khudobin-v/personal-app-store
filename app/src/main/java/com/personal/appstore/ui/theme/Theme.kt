@@ -10,10 +10,12 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.personal.appstore.R
 
 /**
  * Оформление по присланному референсу: светлый пастельный фон, крупные мягкие
@@ -34,6 +36,9 @@ private val CanvasDark = Color(0xFF141316)
 private val SurfaceDark = Color(0xFF1E1D21)
 private val InkDark = Color(0xFFF6F4F3)
 private val InkSoftDark = Color(0xFFA3A0A8)
+
+/** Зелёный акцент онбординга — фирменный цвет дроида, один и тот же в обеих темах. */
+val StoreGreen = Color(0xFF7CB342)
 
 /** Пастельные подложки карточек: тон выбирается по packageName. */
 val CardTints = listOf(
@@ -93,73 +98,105 @@ private val DarkColors = darkColorScheme(
     onError = Ink,
 )
 
+/**
+ * Golos Text — вариативный шрифт (ось wght, Regular…Black), лежит одним файлом
+ * в `res/font`. Compose сам инстанцирует нужное начертание: у `Font` по
+ * умолчанию `variationSettings = Settings(weight, style)`, а API 26 (наш minSdk)
+ * вариативные шрифты уже понимает.
+ */
+val GolosText = FontFamily(
+    Font(R.font.golos_text, FontWeight.Normal),
+    Font(R.font.golos_text, FontWeight.Medium),
+    Font(R.font.golos_text, FontWeight.SemiBold),
+    Font(R.font.golos_text, FontWeight.Bold),
+)
+
+/** Проставляет семейство всем стилям, включая те, что мы не переопределяли. */
+private fun Typography.withFontFamily(family: FontFamily): Typography = copy(
+    displayLarge = displayLarge.copy(fontFamily = family),
+    displayMedium = displayMedium.copy(fontFamily = family),
+    displaySmall = displaySmall.copy(fontFamily = family),
+    headlineLarge = headlineLarge.copy(fontFamily = family),
+    headlineMedium = headlineMedium.copy(fontFamily = family),
+    headlineSmall = headlineSmall.copy(fontFamily = family),
+    titleLarge = titleLarge.copy(fontFamily = family),
+    titleMedium = titleMedium.copy(fontFamily = family),
+    titleSmall = titleSmall.copy(fontFamily = family),
+    bodyLarge = bodyLarge.copy(fontFamily = family),
+    bodyMedium = bodyMedium.copy(fontFamily = family),
+    bodySmall = bodySmall.copy(fontFamily = family),
+    labelLarge = labelLarge.copy(fontFamily = family),
+    labelMedium = labelMedium.copy(fontFamily = family),
+    labelSmall = labelSmall.copy(fontFamily = family),
+)
+
 /** Крупные заголовки с плотным трекингом — как в референсе. */
 private val StoreTypography = Typography(
     displaySmall = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = GolosText,
         fontWeight = FontWeight.Bold,
         fontSize = 34.sp,
         lineHeight = 38.sp,
         letterSpacing = (-1.0).sp,
     ),
     headlineMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = GolosText,
         fontWeight = FontWeight.Bold,
         fontSize = 28.sp,
         lineHeight = 32.sp,
         letterSpacing = (-0.8).sp,
     ),
     titleLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = GolosText,
         fontWeight = FontWeight.Bold,
         fontSize = 22.sp,
         lineHeight = 27.sp,
         letterSpacing = (-0.5).sp,
     ),
     titleMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = GolosText,
         fontWeight = FontWeight.SemiBold,
         fontSize = 18.sp,
         lineHeight = 23.sp,
         letterSpacing = (-0.3).sp,
     ),
     bodyLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = GolosText,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
         lineHeight = 24.sp,
     ),
     bodyMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = GolosText,
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
         lineHeight = 21.sp,
     ),
     bodySmall = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = GolosText,
         fontWeight = FontWeight.Normal,
         fontSize = 13.sp,
         lineHeight = 19.sp,
     ),
     labelLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = GolosText,
         fontWeight = FontWeight.SemiBold,
         fontSize = 15.sp,
         lineHeight = 19.sp,
     ),
     labelMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = GolosText,
         fontWeight = FontWeight.Medium,
         fontSize = 13.sp,
         lineHeight = 17.sp,
     ),
     labelSmall = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = GolosText,
         fontWeight = FontWeight.Medium,
         fontSize = 12.sp,
         lineHeight = 16.sp,
     ),
-)
+).withFontFamily(GolosText)
 
 /** Мягкая геометрия: карточки 24, кнопки-пилюли отдельно в компонентах. */
 private val StoreShapes = Shapes(
