@@ -150,6 +150,28 @@ jobs:
 
           echo "$PACKAGE $VERSION_NAME ($VERSION_CODE), $SIZE bytes, sha256 $SHA256"
 
+      # KVM нужен эмулятору: без него он поднимается минутами и часто падает.
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      # Скриншоты — приятная мелочь, а не условие релиза: эмулятор в CI
+      # капризен, и его падение не должно останавливать публикацию.
+      - name: Capture screenshots
+        continue-on-error: true
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: ./tools/screenshots.sh "${{ steps.apk.outputs.path }}" "${{ steps.apk.outputs.package }}" "${{ runner.temp }}/screenshots"
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -159,15 +181,22 @@ jobs:
 
           # Release мог остаться от упавшего прогона (например, не хватило прав
           # на манифест): тогда перезаливаем ассет, а не падаем на «уже существует».
+          # APK обязателен, снимки экрана — если эмулятор их снял.
+          ASSETS=("${{ steps.apk.outputs.path }}")
+          for shot in "$RUNNER_TEMP"/screenshots/screenshot-*.png; do
+            [ -f "$shot" ] && ASSETS+=("$shot")
+          done
+          echo "ассетов: ${#ASSETS[@]}"
+
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Release $TAG уже существует — обновляю ассет и описание"
-            gh release upload "$TAG" "${{ steps.apk.outputs.path }}" --clobber
+            gh release upload "$TAG" "${ASSETS[@]}" --clobber
             gh release edit "$TAG" \
               --title "${{ steps.apk.outputs.label }} ${{ steps.apk.outputs.version_name }}" \
               --notes-file "${{ steps.tag.outputs.changelog_file }}"
           else
             gh release create "$TAG" \
-              "${{ steps.apk.outputs.path }}" \
+              "${ASSETS[@]}" \
               --title "${{ steps.apk.outputs.label }} ${{ steps.apk.outputs.version_name }}" \
               --notes-file "${{ steps.tag.outputs.changelog_file }}"
           fi
@@ -189,6 +218,14 @@ jobs:
             export ICON_URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${{ steps.tag.outputs.tag }}/${ICON_PATH}"
           fi
 
+          # Снимки экрана уже лежат ассетами релиза — витрине нужны их ссылки.
+          SCREENSHOT_URLS=""
+          for shot in "$RUNNER_TEMP"/screenshots/screenshot-*.png; do
+            [ -f "$shot" ] || continue
+            SCREENSHOT_URLS="$SCREENSHOT_URLS https://github.com/${GITHUB_REPOSITORY}/releases/download/${{ steps.tag.outputs.tag }}/$(basename "$shot")"
+          done
+          export SCREENSHOT_URLS
+
           # JSON собираем питоном: changelog многострочный, кавычки экранировать вручную нельзя.
           python3 - "${{ steps.tag.outputs.changelog_file }}" > "$RUNNER_TEMP/publish.json" <<PY
           import json, os, sys
@@ -205,6 +242,9 @@ jobs:
           icon = os.environ.get("ICON_URL")
           if icon:
               payload["iconUrl"] = icon
+          shots = os.environ.get("SCREENSHOT_URLS", "").split()
+          if shots:
+              payload["screenshots"] = shots
           print(json.dumps(payload, ensure_ascii=False))
           PY
 
