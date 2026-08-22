@@ -31,6 +31,8 @@ data class AppDto(
     val apkSizeBytes: Long,
     val changelog: String = "",
     val releasedAt: String? = null,
+    /** Снимки экрана этой версии: их делает конвейер сборки на эмуляторе. */
+    val screenshots: List<String> = emptyList(),
     /** Кто опубликовал последнюю версию: логин издателя либо 'ci'. */
     val publishedBy: String? = null,
     val versions: List<VersionDto> = emptyList(),
@@ -45,4 +47,5 @@ data class VersionDto(
     val apkSizeBytes: Long,
     val changelog: String = "",
     val releasedAt: String? = null,
+    val screenshots: List<String> = emptyList(),
 )

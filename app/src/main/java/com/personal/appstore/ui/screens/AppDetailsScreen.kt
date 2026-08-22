@@ -1,7 +1,12 @@
 package com.personal.appstore.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,7 +32,10 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import com.personal.appstore.domain.AppStatus
 import com.personal.appstore.domain.model.AppRelease
 import com.personal.appstore.domain.model.DownloadState
@@ -87,6 +95,10 @@ fun AppDetailsScreen(
 
                     else -> Unit
                 }
+            }
+
+            if (item.app.latest.screenshots.isNotEmpty()) {
+                Screenshots(item.app.latest.screenshots)
             }
 
             Section(title = "Что нового") {
@@ -155,6 +167,31 @@ private fun Header(item: AppItem, onPrimaryAction: () -> Unit) {
                 Button(onClick = onPrimaryAction) { Text("Обновить") }
 
             else -> OutlinedButton(onClick = onPrimaryAction) { Text("Открыть") }
+        }
+    }
+}
+
+/**
+ * Снимки экрана — лента с горизонтальной прокруткой. Кадры снимает конвейер
+ * сборки на эмуляторе, поэтому пропорции у них всегда «телефонные».
+ */
+@Composable
+private fun Screenshots(urls: List<String>) {
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        items(urls, key = { it }) { url ->
+            AsyncImage(
+                model = url,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .height(320.dp)
+                    .aspectRatio(9f / 19.5f)
+                    .clip(MaterialTheme.shapes.large)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+            )
         }
     }
 }

@@ -11,6 +11,8 @@ data class AppRelease(
     val apkSizeBytes: Long,
     val changelog: String,
     val releasedAt: Instant?,
+    /** Снимки экрана: их снимает конвейер сборки на эмуляторе. */
+    val screenshots: List<String> = emptyList(),
 )
 
 /** Приложение в витрине: последняя версия + история (до 10 записей). */

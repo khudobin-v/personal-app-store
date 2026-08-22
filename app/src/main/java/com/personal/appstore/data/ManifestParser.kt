@@ -60,6 +60,7 @@ object ManifestParser {
                 apkSizeBytes = dto.apkSizeBytes,
                 changelog = dto.changelog,
                 releasedAt = dto.releasedAt,
+                screenshots = dto.screenshots,
             ),
         ) ?: return null
 
@@ -93,6 +94,8 @@ object ManifestParser {
             apkSizeBytes = dto.apkSizeBytes,
             changelog = dto.changelog.trim(),
             releasedAt = parseInstant(dto.releasedAt),
+            // Чужие ссылки в витрину попасть не должны: только https.
+            screenshots = dto.screenshots.filter { it.startsWith("https://") },
         )
     }
 
