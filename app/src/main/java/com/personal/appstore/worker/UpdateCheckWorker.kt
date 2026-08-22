@@ -19,8 +19,8 @@ import com.personal.appstore.domain.model.StoreApp
 import java.util.concurrent.TimeUnit
 
 /**
- * Фоновая проверка витрины: раз в ~6 часов при наличии сети сравнивает манифест
- * с установленными пакетами и показывает уведомление о новых версиях.
+ * Фоновая проверка витрины: раз в час при наличии сети сравнивает манифест с
+ * установленными пакетами и показывает уведомление о новых версиях.
  */
 class UpdateCheckWorker(
     appContext: Context,
@@ -77,9 +77,11 @@ class UpdateCheckWorker(
                 .build()
 
             val workManager = WorkManager.getInstance(context)
+            // UPDATE, а не KEEP: с KEEP у тех, кто уже поставил магазин, навсегда
+            // осталась бы старая периодичность из прошлой версии.
             workManager.enqueueUniquePeriodicWork(
                 WORK_NAME,
-                ExistingPeriodicWorkPolicy.KEEP,
+                ExistingPeriodicWorkPolicy.UPDATE,
                 periodic,
             )
 

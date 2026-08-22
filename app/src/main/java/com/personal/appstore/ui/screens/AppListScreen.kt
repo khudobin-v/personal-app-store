@@ -3,6 +3,9 @@ package com.personal.appstore.ui.screens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -46,26 +49,34 @@ fun AppListScreen(
     onOpenDetails: (AppItem) -> Unit,
     onOpenSetup: () -> Unit,
 ) {
+    // Баннер идёт до самого верха экрана и заменяет собой шапку — шестерёнка
+    // и «последнее обновление» живут внутри него. Шапка нужна, только когда
+    // баннера нет: пустая витрина, ошибка, загрузка.
+    val hasBanner = state.latestUpdate != null && !state.isLoading && state.error == null
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("Мой магазин", style = MaterialTheme.typography.headlineMedium)
-                        Text(
-                            text = "обновлено ${Format.ago(state.lastUpdatedMillis)}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onOpenSetup) {
-                        Icon(Icons.Filled.Settings, contentDescription = "Настройки витрины")
-                    }
-                },
-            )
+            if (!hasBanner) {
+                TopAppBar(
+                    title = {
+                        Column {
+                            Text("Мой магазин", style = MaterialTheme.typography.headlineMedium)
+                            Text(
+                                text = "обновлено ${Format.ago(state.lastUpdatedMillis)}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = onOpenSetup) {
+                            Icon(Icons.Filled.Settings, contentDescription = "Настройки витрины")
+                        }
+                    },
+                )
+            }
         },
+        contentWindowInsets = WindowInsets(0),
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         PullToRefreshBox(
@@ -73,12 +84,13 @@ fun AppListScreen(
             onRefresh = onRefresh,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding),
+                .padding(padding)
+                .navigationBarsPadding(),
         ) {
             when {
                 state.isLoading -> LoadingContent()
                 state.error != null -> ErrorContent(state.error, onRefresh, onOpenSetup)
-                else -> Content(state, onPrimaryAction, onOpenDetails)
+                else -> Content(state, onPrimaryAction, onOpenDetails, onOpenSetup)
             }
         }
     }
@@ -89,11 +101,36 @@ private fun Content(
     state: StoreUiState,
     onPrimaryAction: (AppItem) -> Unit,
     onOpenDetails: (AppItem) -> Unit,
+    onOpenSetup: () -> Unit,
 ) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         state.latestUpdate?.let { latest ->
             item(key = "latest-update") {
-                LatestUpdateBanner(item = latest, onClick = { onOpenDetails(latest) })
+                LatestUpdateBanner(
+                    item = latest,
+                    onClick = { onOpenDetails(latest) },
+                    onOpenSetup = onOpenSetup,
+                )
+            }
+            item(key = "store-title") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 4.dp),
+                    verticalAlignment = Alignment.Bottom,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        text = "Мой магазин",
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        text = "обновлено ${Format.ago(state.lastUpdatedMillis)}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
 

@@ -9,13 +9,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,6 +39,7 @@ import com.personal.appstore.ui.AppItem
 fun LatestUpdateBanner(
     item: AppItem,
     onClick: () -> Unit,
+    onOpenSetup: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val background = MaterialTheme.colorScheme.background
@@ -49,11 +53,35 @@ fun LatestUpdateBanner(
             .fillMaxWidth()
             .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
             .background(tint)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 20.dp),
+            .clickable(onClick = onClick),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        // Подложка уходит под строку статуса, отступ держит только содержимое.
+        Column(
+            modifier = Modifier
+                .statusBarsPadding()
+                .padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "Последнее обновление",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = inkSoft,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(onClick = onOpenSetup) {
+                    Icon(
+                        imageVector = Icons.Filled.Settings,
+                        contentDescription = "Настройки",
+                        tint = ink,
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier.padding(end = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Column(
                     modifier = Modifier
                         .weight(1f)
@@ -101,7 +129,10 @@ fun LatestUpdateBanner(
             }
 
             item.app.latest.changelog.takeIf { it.isNotBlank() }?.let { changelog ->
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Column(
+                    modifier = Modifier.padding(end = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
                     Text(
                         text = "Что нового:",
                         style = MaterialTheme.typography.labelLarge,
