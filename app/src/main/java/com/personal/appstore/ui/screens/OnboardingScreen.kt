@@ -116,6 +116,15 @@ private const val CollageHeightFraction = 0.62f
 private const val CollageRotation = -15f
 
 /**
+ * Запас на поворот. Повёрнутая картинка не накрывает углы полосы — по диагонали
+ * остаются пустые клинья. Полностью их убрал бы множитель
+ * `max((W·cosθ + H·sinθ)/W, (W·sinθ + H·cosθ)/H)` ≈ 1.3, но он же раздувает
+ * фигурки в полтора раза. Берём половину запаса, а остатки клиньев прячем в
+ * градиенты сверху и снизу — они как раз приходятся на углы.
+ */
+private const val CollageCover = 1.15f
+
+/**
  * Коллаж — готовая картинка `res/drawable-nodpi/onboarding_collage.webp`,
  * наклонённая на [CollageRotation]. Занимает всё место над заголовком:
  * картинка горизонтальная, поэтому по бокам её подрезает край экрана — как в
@@ -132,7 +141,11 @@ private fun DroidCollage(modifier: Modifier = Modifier) {
             alignment = Alignment.TopCenter,
             modifier = Modifier
                 .fillMaxSize()
-                .graphicsLayer { rotationZ = CollageRotation },
+                .graphicsLayer {
+                    rotationZ = CollageRotation
+                    scaleX = CollageCover
+                    scaleY = CollageCover
+                },
         )
         // Растворяем картинку в фоне с обеих сторон: сверху — чтобы обрез не
         // упирался в строку статуса, снизу — чтобы не спорил с заголовком.
@@ -142,8 +155,8 @@ private fun DroidCollage(modifier: Modifier = Modifier) {
                 .background(
                     Brush.verticalGradient(
                         0f to background,
-                        0.12f to Color.Transparent,
-                        0.80f to Color.Transparent,
+                        0.22f to Color.Transparent,
+                        0.74f to Color.Transparent,
                         1f to background,
                     ),
                 ),

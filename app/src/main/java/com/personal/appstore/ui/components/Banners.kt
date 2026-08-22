@@ -1,21 +1,124 @@
 package com.personal.appstore.ui.components
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.personal.appstore.domain.model.DownloadState
 import com.personal.appstore.ui.AppItem
+
+/**
+ * Шапка списка: приложение, которое обновилось последним. Подложка — половина
+ * основного цвета его иконки, поэтому баннер каждый раз выглядит «в тон»
+ * обновившемуся приложению.
+ */
+@Composable
+fun LatestUpdateBanner(
+    item: AppItem,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val background = MaterialTheme.colorScheme.background
+    val accent = rememberIconAccent(item.app.iconUrl, fallback = MaterialTheme.colorScheme.secondaryContainer)
+    val tint = accent.asBannerTint(background)
+    val ink = tint.readableInk()
+    val inkSoft = ink.copy(alpha = 0.82f)
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
+            .background(tint)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 20.dp),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        text = item.app.name,
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = ink,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    item.app.author?.takeIf { it.isNotBlank() }?.let { author ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Text(
+                                text = author,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = inkSoft,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Icon(
+                                imageVector = Icons.Filled.CheckCircle,
+                                contentDescription = null,
+                                tint = inkSoft,
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
+                    }
+                    Text(
+                        text = "Версия ${item.app.latest.versionName}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = inkSoft,
+                    )
+                }
+                AppIcon(
+                    iconUrl = item.app.iconUrl,
+                    name = item.app.name,
+                    size = 96.dp,
+                )
+            }
+
+            item.app.latest.changelog.takeIf { it.isNotBlank() }?.let { changelog ->
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = "Что нового:",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = ink,
+                    )
+                    Text(
+                        text = changelog.trim(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = inkSoft,
+                        maxLines = 4,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+    }
+}
 
 /** «Обновить магазин»: сам магазин публикуется в витрине как обычное приложение. */
 @Composable

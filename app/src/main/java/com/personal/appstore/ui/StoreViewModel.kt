@@ -58,6 +58,8 @@ data class StoreUiState(
     val items: List<AppItem> = emptyList(),
     /** Заполнено, если обновился сам магазин — показываем баннер. */
     val storeUpdate: AppItem? = null,
+    /** Приложение с самой свежей публикацией — для баннера-шапки. */
+    val latestUpdate: AppItem? = null,
     val error: String? = null,
     val warning: String? = null,
     val isStale: Boolean = false,
@@ -379,6 +381,9 @@ class StoreViewModel(
                 storeUpdate = items.firstOrNull {
                     it.id == storePackageName && it.status is AppStatus.UpdateAvailable
                 },
+                latestUpdate = items
+                    .filter { it.app.latest.releasedAt != null }
+                    .maxByOrNull { it.app.latest.releasedAt!! },
                 warning = manifestState.warning,
                 isStale = manifestState.isStale,
                 lastUpdatedMillis = manifestState.fetchedAtMillis,

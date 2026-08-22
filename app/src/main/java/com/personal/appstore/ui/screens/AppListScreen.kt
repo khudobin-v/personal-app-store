@@ -32,6 +32,7 @@ import com.personal.appstore.ui.AppItem
 import com.personal.appstore.ui.Format
 import com.personal.appstore.ui.StoreUiState
 import com.personal.appstore.ui.components.AppRow
+import com.personal.appstore.ui.components.LatestUpdateBanner
 import com.personal.appstore.ui.components.OfflineBanner
 import com.personal.appstore.ui.components.StoreUpdateBanner
 
@@ -90,6 +91,12 @@ private fun Content(
     onOpenDetails: (AppItem) -> Unit,
 ) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
+        state.latestUpdate?.let { latest ->
+            item(key = "latest-update") {
+                LatestUpdateBanner(item = latest, onClick = { onOpenDetails(latest) })
+            }
+        }
+
         state.storeUpdate?.let { storeItem ->
             item(key = "store-update") {
                 StoreUpdateBanner(item = storeItem, onUpdate = { onPrimaryAction(storeItem) })
