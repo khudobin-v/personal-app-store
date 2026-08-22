@@ -32,6 +32,7 @@ import com.personal.appstore.ui.screens.AppListScreen
 import com.personal.appstore.ui.screens.OnboardingScreen
 import com.personal.appstore.ui.screens.SetupScreen
 import com.personal.appstore.ui.theme.PersonalAppStoreTheme
+import com.personal.appstore.worker.UpdateNotifier
 
 class MainActivity : ComponentActivity() {
 
@@ -55,6 +56,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         requestNotificationPermissionIfNeeded()
+        // Магазин уже открыт — уведомление «Магазин обновлён» больше не нужно.
+        UpdateNotifier(this).cancelSelfUpdated()
 
         setContent {
             PersonalAppStoreTheme {

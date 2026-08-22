@@ -59,6 +59,45 @@ class UpdateNotifier(private val context: Context) {
         NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, notification)
     }
 
+    /**
+     * «Магазин обновился, откройте» после самообновления.
+     *
+     * Своё обновление всегда убивает процесс, а поднять активити из
+     * широковещательного приёмника нельзя: с Android 10 фоновый запуск активити
+     * запрещён. Уведомление — единственный надёжный способ вернуть человека в
+     * магазин; так же ведёт себя и Google Play.
+     */
+    fun notifySelfUpdated(versionName: String?) {
+        if (!canPostNotifications()) return
+        ensureChannel()
+
+        val contentIntent = PendingIntent.getActivity(
+            context,
+            SELF_UPDATE_REQUEST,
+            Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.stat_sys_download_done)
+            .setContentTitle("Магазин обновлён")
+            .setContentText(
+                versionName?.let { "Версия $it готова — нажмите, чтобы открыть" }
+                    ?: "Нажмите, чтобы открыть",
+            )
+            .setContentIntent(contentIntent)
+            .setAutoCancel(true)
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .build()
+
+        NotificationManagerCompat.from(context).notify(SELF_UPDATE_NOTIFICATION_ID, notification)
+    }
+
+    /** Гасим уведомление, когда магазин и так открыт. */
+    fun cancelSelfUpdated() {
+        NotificationManagerCompat.from(context).cancel(SELF_UPDATE_NOTIFICATION_ID)
+    }
+
     private fun canPostNotifications(): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
         return ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
@@ -68,5 +107,7 @@ class UpdateNotifier(private val context: Context) {
     companion object {
         const val CHANNEL_ID = "app-updates"
         private const val NOTIFICATION_ID = 1001
+        private const val SELF_UPDATE_NOTIFICATION_ID = 1002
+        private const val SELF_UPDATE_REQUEST = 2
     }
 }

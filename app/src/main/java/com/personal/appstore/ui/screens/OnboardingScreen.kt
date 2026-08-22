@@ -235,17 +235,23 @@ private fun SlideToStart(onStart: () -> Unit, modifier: Modifier = Modifier) {
                     .background(Color.White)
                     .draggable(
                         orientation = Orientation.Horizontal,
-                        enabled = !finished,
                         state = rememberDraggableState { delta ->
                             scope.launch {
                                 offset.snapTo((offset.value + delta).coerceIn(0f, travel))
                             }
                         },
                         onDragStopped = {
+                            if (finished) return@draggable
                             if (travel > 0f && offset.value >= travel * SlideThreshold) {
                                 finished = true
-                                offset.animateTo(travel, tween(durationMillis = 120))
-                                onStart()
+                                // Докатывание и переход — в scope экрана, а не в корутине
+                                // жеста: `enabled = !finished` тут же снимает draggable,
+                                // его корутина отменяется, и onStart() не доходит —
+                                // кружок замирает у края, а экран не меняется.
+                                scope.launch {
+                                    offset.animateTo(travel, tween(durationMillis = 120))
+                                    onStart()
+                                }
                             } else {
                                 offset.animateTo(
                                     targetValue = 0f,

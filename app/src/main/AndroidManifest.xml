@@ -58,6 +58,16 @@
         <receiver
             android:name=".installer.InstallResultReceiver"
             android:exported="false" />
+
+        <!-- Магазин обновил сам себя: процесс убит, возвращаем пользователя.
+             exported="true" обязателен — броадкаст присылает система. -->
+        <receiver
+            android:name=".installer.PackageReplacedReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>
