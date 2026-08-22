@@ -1,17 +1,25 @@
 package com.personal.appstore.ui.screens
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -20,28 +28,48 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.personal.appstore.R
 import com.personal.appstore.ui.theme.StoreGreen
+import kotlinx.coroutines.launch
+import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.max
+import kotlin.math.roundToInt
+import kotlin.math.sin
 
 /**
- * Приветственный экран: коллаж дроидов-персонажей, крупный заголовок и одна
- * зелёная кнопка-пилюля. Показывается при первом запуске, а в режиме
- * разработчика — при каждом.
+ * Приветственный экран: коллаж дроидов, крупный заголовок и слайдер
+ * «К приложениям!». Показывается при первом запуске, а в режиме разработчика —
+ * при каждом.
  */
 @Composable
 fun OnboardingScreen(onStart: () -> Unit) {
@@ -50,7 +78,7 @@ fun OnboardingScreen(onStart: () -> Unit) {
             DroidCollage(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(CollageAspect / CollageZoom),
+                    .fillMaxHeight(CollageHeightFraction),
             )
             Spacer(modifier = Modifier.weight(1f))
             Column(
@@ -65,6 +93,7 @@ fun OnboardingScreen(onStart: () -> Unit) {
                 Text(
                     text = "Устанавливайте свои приложения",
                     style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground,
                     textAlign = TextAlign.Center,
                 )
@@ -75,27 +104,39 @@ fun OnboardingScreen(onStart: () -> Unit) {
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
-                StartButton(onClick = onStart, modifier = Modifier.padding(top = 8.dp))
+                SlideToStart(onStart = onStart, modifier = Modifier.padding(top = 8.dp))
             }
         }
     }
 }
 
-/** Пропорции присланного коллажа (5608 × 4488). */
-private const val CollageAspect = 5608f / 4488f
-
 /**
- * Насколько картинка шире экрана. Коллаж горизонтальный, экран вертикальный:
- * без запаса фигурки выходят мелкими, с запасом крайние уходят за край —
- * как в референсе. 1.45 — компромисс: видны все 20, обрезаны только края.
+ * Какую долю экрана занимает коллаж. Картинка горизонтальная: чем выше полоса,
+ * тем сильнее Crop увеличивает фигурки и тем меньше их влезает. 0.45 — та
+ * плотность, что на референсе.
  */
-private const val CollageZoom = 1.45f
+private const val CollageHeightFraction = 0.45f
+
+/** Наклон коллажа — как в референсе. */
+private const val CollageRotation = 15f
 
 /**
- * Коллаж — готовая картинка `res/drawable-nodpi/onboarding_collage.webp`.
- * Область берём по пропорциям картинки с запасом [CollageZoom]: фигурки
- * получаются крупными, а крайние подрезаются краем экрана. Низ гасим
- * градиентом в фон, чтобы заголовок не спорил с картинкой.
+ * Во сколько раз увеличить повёрнутую картинку, чтобы её углы не заехали в
+ * кадр: прямоугольник W × H, повёрнутый на θ, накрывает исходный, если его
+ * масштабировать в `max((W·cosθ + H·sinθ)/W, (W·sinθ + H·cosθ)/H)` раз.
+ */
+private fun coverScale(width: Float, height: Float, degrees: Float): Float {
+    val rad = degrees * PI.toFloat() / 180f
+    val c = abs(cos(rad))
+    val s = abs(sin(rad))
+    return max((width * c + height * s) / width, (width * s + height * c) / height)
+}
+
+/**
+ * Коллаж — готовая картинка `res/drawable-nodpi/onboarding_collage.webp`,
+ * наклонённая на [CollageRotation]. Занимает всё место над заголовком:
+ * картинка горизонтальная, поэтому по бокам её подрезает край экрана — как в
+ * референсе. Низ гасим градиентом в фон, чтобы заголовок не спорил с картинкой.
  */
 @Composable
 private fun DroidCollage(modifier: Modifier = Modifier) {
@@ -106,14 +147,21 @@ private fun DroidCollage(modifier: Modifier = Modifier) {
             contentDescription = null,
             contentScale = ContentScale.Crop,
             alignment = Alignment.TopCenter,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    val cover = coverScale(size.width, size.height, CollageRotation)
+                    rotationZ = CollageRotation
+                    scaleX = cover
+                    scaleY = cover
+                },
         )
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        0.62f to Color.Transparent,
+                        0.78f to Color.Transparent,
                         0.98f to background,
                     ),
                 ),
@@ -121,36 +169,95 @@ private fun DroidCollage(modifier: Modifier = Modifier) {
     }
 }
 
-/** Зелёная пилюля с белым кружком-шевроном справа. */
+private val PillHeight: Dp = 72.dp
+private val KnobInset: Dp = 8.dp
+
+/** Доля пути, после которой отпускание засчитывается как «дотянул». */
+private const val SlideThreshold = 0.85f
+
+/**
+ * Зелёная пилюля со свайпом до конца — как приём вызова на старых iPhone:
+ * кружок с шевроном тянется вправо, надпись по пути гаснет, у края
+ * срабатывает переход. Отпустили раньше — кружок уезжает обратно.
+ */
 @Composable
-private fun StartButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val pillHeight: Dp = 72.dp
+private fun SlideToStart(onStart: () -> Unit, modifier: Modifier = Modifier) {
+    val density = LocalDensity.current
+    val scope = rememberCoroutineScope()
+    val knobSize = PillHeight - KnobInset * 2
+    val offset = remember { Animatable(0f) }
+    var travel by remember { mutableFloatStateOf(0f) }
+    // Второй раз не срабатываем: докатывание анимируется уже после onStart.
+    var finished by remember { mutableStateOf(false) }
+    val progress = if (travel > 0f) (offset.value / travel).coerceIn(0f, 1f) else 0f
+
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(pillHeight)
+            .height(PillHeight)
             .clip(RoundedCornerShape(percent = 50))
             .background(StoreGreen)
-            .clickable(onClick = onClick)
-            .semantics { contentDescription = "К приложениям" },
-        contentAlignment = Alignment.Center,
+            .semantics {
+                contentDescription = "К приложениям: проведите кружок вправо"
+                onClick(label = "Перейти к приложениям") {
+                    onStart()
+                    true
+                }
+            },
+        contentAlignment = Alignment.CenterStart,
     ) {
         Text(
             text = "К приложениям!",
             style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
             color = Color.White,
-            modifier = Modifier.padding(end = 56.dp),
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = PillHeight, end = 24.dp)
+                .alpha(1f - progress),
         )
+
         Box(
             modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .padding(8.dp)
-                .size(pillHeight - 16.dp)
-                .clip(CircleShape)
-                .background(Color.White),
-            contentAlignment = Alignment.Center,
+                .fillMaxSize()
+                .padding(KnobInset)
+                .onSizeChanged { size ->
+                    travel = (size.width - with(density) { knobSize.toPx() }).coerceAtLeast(0f)
+                },
         ) {
-            Chevrons()
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .offset { IntOffset(offset.value.roundToInt(), 0) }
+                    .size(knobSize)
+                    .clip(CircleShape)
+                    .background(Color.White)
+                    .draggable(
+                        orientation = Orientation.Horizontal,
+                        enabled = !finished,
+                        state = rememberDraggableState { delta ->
+                            scope.launch {
+                                offset.snapTo((offset.value + delta).coerceIn(0f, travel))
+                            }
+                        },
+                        onDragStopped = {
+                            if (travel > 0f && offset.value >= travel * SlideThreshold) {
+                                finished = true
+                                offset.animateTo(travel, tween(durationMillis = 120))
+                                onStart()
+                            } else {
+                                offset.animateTo(
+                                    targetValue = 0f,
+                                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                                )
+                            }
+                        },
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Chevrons()
+            }
         }
     }
 }
@@ -158,25 +265,23 @@ private fun StartButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
 @Composable
 private fun Chevrons() {
     val color = MaterialTheme.colorScheme.onSurfaceVariant
-    androidx.compose.foundation.Canvas(modifier = Modifier.size(26.dp, 14.dp)) {
-        val w = size.width
-        val h = size.height
-        val step = w / 3f
-        val arm = h / 2f
+    Canvas(modifier = Modifier.size(26.dp, 14.dp)) {
+        val step = size.width / 3f
+        val arm = size.height / 2f
         repeat(3) { i ->
             val x = step * i + step * 0.15f
             drawLine(
                 color = color,
                 start = Offset(x, 0f),
-                end = Offset(x + arm, h / 2f),
-                strokeWidth = h * 0.13f,
+                end = Offset(x + arm, size.height / 2f),
+                strokeWidth = size.height * 0.13f,
                 cap = StrokeCap.Round,
             )
             drawLine(
                 color = color,
-                start = Offset(x + arm, h / 2f),
-                end = Offset(x, h),
-                strokeWidth = h * 0.13f,
+                start = Offset(x + arm, size.height / 2f),
+                end = Offset(x, size.height),
+                strokeWidth = size.height * 0.13f,
                 cap = StrokeCap.Round,
             )
         }

@@ -9,9 +9,11 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -100,15 +102,22 @@ private val DarkColors = darkColorScheme(
 
 /**
  * Golos Text — вариативный шрифт (ось wght, Regular…Black), лежит одним файлом
- * в `res/font`. Compose сам инстанцирует нужное начертание: у `Font` по
- * умолчанию `variationSettings = Settings(weight, style)`, а API 26 (наш minSdk)
- * вариативные шрифты уже понимает.
+ * в `res/font`. Ось задаём явно: без `variationSettings` все четыре начертания
+ * рисуются одним и тем же Regular, и жирный заголовок выглядит обычным.
+ * Вариативные шрифты работают с API 26 — это наш minSdk.
  */
+@OptIn(ExperimentalTextApi::class)
+private fun golos(weight: FontWeight) = Font(
+    resId = R.font.golos_text,
+    weight = weight,
+    variationSettings = FontVariation.Settings(FontVariation.weight(weight.weight)),
+)
+
 val GolosText = FontFamily(
-    Font(R.font.golos_text, FontWeight.Normal),
-    Font(R.font.golos_text, FontWeight.Medium),
-    Font(R.font.golos_text, FontWeight.SemiBold),
-    Font(R.font.golos_text, FontWeight.Bold),
+    golos(FontWeight.Normal),
+    golos(FontWeight.Medium),
+    golos(FontWeight.SemiBold),
+    golos(FontWeight.Bold),
 )
 
 /** Проставляет семейство всем стилям, включая те, что мы не переопределяли. */
