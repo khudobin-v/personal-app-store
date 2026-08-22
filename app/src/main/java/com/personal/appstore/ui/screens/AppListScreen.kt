@@ -1,5 +1,8 @@
 package com.personal.appstore.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,12 +15,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -26,7 +33,13 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -103,6 +116,9 @@ private fun Content(
     onOpenDetails: (AppItem) -> Unit,
     onOpenSetup: () -> Unit,
 ) {
+    var query by rememberSaveable { mutableStateOf("") }
+    val visible = remember(state.items, query) { filterApps(state.items, query) }
+
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         state.latestUpdate?.let { latest ->
             item(key = "latest-update") {
@@ -134,6 +150,16 @@ private fun Content(
             }
         }
 
+        if (state.items.size > 1) {
+            item(key = "search") {
+                SearchField(
+                    query = query,
+                    onQueryChange = { query = it },
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
+        }
+
         state.storeUpdate?.let { storeItem ->
             item(key = "store-update") {
                 StoreUpdateBanner(item = storeItem, onUpdate = { onPrimaryAction(storeItem) })
@@ -151,15 +177,80 @@ private fun Content(
 
         if (state.items.isEmpty()) {
             item(key = "empty") { EmptyContent() }
+        } else if (visible.isEmpty()) {
+            item(key = "not-found") { NothingFound(query) }
         }
 
-        items(state.items, key = { it.id }) { item ->
+        items(visible, key = { it.id }) { item ->
             AppRow(
                 item = item,
                 onPrimaryAction = { onPrimaryAction(item) },
                 onClick = { onOpenDetails(item) },
+                // Строки переезжают плавно, когда список фильтруется поиском.
+                modifier = Modifier.animateItem(),
             )
         }
+    }
+}
+
+/** Поиск по названию, автору и packageName — витрина маленькая, фильтруем на месте. */
+private fun filterApps(items: List<AppItem>, query: String): List<AppItem> {
+    val q = query.trim()
+    if (q.isEmpty()) return items
+    return items.filter { item ->
+        item.app.name.contains(q, ignoreCase = true) ||
+            item.app.author?.contains(q, ignoreCase = true) == true ||
+            item.app.id.contains(q, ignoreCase = true)
+    }
+}
+
+@Composable
+private fun SearchField(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        modifier = modifier.fillMaxWidth(),
+        placeholder = { Text("Поиск по приложениям", style = MaterialTheme.typography.bodyMedium) },
+        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+        trailingIcon = {
+            AnimatedVisibility(visible = query.isNotEmpty(), enter = fadeIn(), exit = fadeOut()) {
+                IconButton(onClick = { onQueryChange("") }) {
+                    Icon(Icons.Filled.Close, contentDescription = "Очистить")
+                }
+            }
+        },
+        singleLine = true,
+        shape = RoundedCornerShape(50),
+        textStyle = MaterialTheme.typography.bodyMedium,
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.outline,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+            focusedContainerColor = MaterialTheme.colorScheme.surface,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+        ),
+    )
+}
+
+@Composable
+private fun NothingFound(query: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 32.dp, vertical = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text("Ничего не найдено", style = MaterialTheme.typography.titleSmall)
+        Text(
+            text = "По запросу «${query.trim()}» в витрине нет приложений",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 

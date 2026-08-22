@@ -20,8 +20,11 @@ import androidx.compose.ui.unit.sp
 import com.personal.appstore.R
 
 /**
- * Оформление по присланному референсу: светлый пастельный фон, крупные мягкие
+ * Оформление по присланному референсу: нейтральный светлый фон, крупные мягкие
  * карточки, тёмная «пилюля» главного действия и очень крупные заголовки.
+ *
+ * Фон и поверхности намеренно без тёплого подмеса: карточки красятся в цвет
+ * иконок приложений, и любой оттенок у подложки спорил бы с ними.
  *
  * Каждому приложению достаётся своя пастельная подложка — как плитки коллекции
  * в референсе. Цвет выводится из packageName, чтобы не зависеть от порядка в
@@ -30,12 +33,12 @@ import com.personal.appstore.R
 
 private val Ink = Color(0xFF1B1B1F)
 private val InkSoft = Color(0xFF6B6B75)
-private val Canvas = Color(0xFFFBF8F7)
+private val Canvas = Color(0xFFF7F7F8)
 private val Coral = Color(0xFFF2A9A0)
 private val CoralDeep = Color(0xFFE0897E)
 
-private val CanvasDark = Color(0xFF141316)
-private val SurfaceDark = Color(0xFF1E1D21)
+private val CanvasDark = Color(0xFF121214)
+private val SurfaceDark = Color(0xFF1D1D20)
 private val InkDark = Color(0xFFF6F4F3)
 private val InkSoftDark = Color(0xFFA3A0A8)
 
@@ -67,12 +70,12 @@ private val LightColors = lightColorScheme(
     onBackground = Ink,
     surface = Color.White,
     onSurface = Ink,
-    surfaceVariant = Color(0xFFF1ECEA),
+    surfaceVariant = Color(0xFFEFEFF1),
     onSurfaceVariant = InkSoft,
     surfaceContainer = Color.White,
-    surfaceContainerHigh = Color(0xFFF4EFED),
-    outline = Color(0xFFE6DFDC),
-    outlineVariant = Color(0xFFEFE9E6),
+    surfaceContainerHigh = Color(0xFFF1F1F3),
+    outline = Color(0xFFE1E1E5),
+    outlineVariant = Color(0xFFEBEBEF),
     error = Color(0xFFB3352F),
     onError = Color.White,
 )

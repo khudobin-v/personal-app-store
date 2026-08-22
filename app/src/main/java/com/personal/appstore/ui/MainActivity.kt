@@ -8,6 +8,13 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -33,6 +40,21 @@ import com.personal.appstore.ui.screens.OnboardingScreen
 import com.personal.appstore.ui.screens.SetupScreen
 import com.personal.appstore.ui.theme.PersonalAppStoreTheme
 import com.personal.appstore.worker.UpdateNotifier
+
+/** Что показываем и насколько глубоко — от этого зависит направление анимации. */
+private data class ScreenKey(
+    val decided: Boolean,
+    val onboarding: Boolean,
+    val setup: Boolean,
+    val detailsId: String?,
+) {
+    val depth: Int
+        get() = when {
+            !decided || onboarding -> 0
+            setup || detailsId != null -> 2
+            else -> 1
+        }
+}
 
 class MainActivity : ComponentActivity() {
 
@@ -84,47 +106,77 @@ class MainActivity : ComponentActivity() {
                     if (showSetup) showSetup = false else selectedId = null
                 }
 
-                if (!onboarding.decided) {
-                    // Настройки ещё читаются — держим пустой фон, чтобы не мигать экранами.
-                    Surface(
-                        modifier = Modifier.fillMaxSize(),
-                        color = MaterialTheme.colorScheme.background,
-                    ) {}
-                } else if (onboarding.visible) {
-                    OnboardingScreen(onStart = viewModel::completeOnboarding)
-                } else if (showSetup) {
-                    SetupScreen(
-                        state = setupState,
-                        onBack = { showSetup = false },
-                        onAlwaysShowOnboardingChange = viewModel::setAlwaysShowOnboarding,
-                        onLoginChange = viewModel::onLoginChange,
-                        onSearch = viewModel::searchStorefronts,
-                        onChoose = { url, login ->
-                            viewModel.chooseStorefront(url, login)
-                            showSetup = false
-                        },
-                        onManualUrlChange = viewModel::onManualUrlChange,
-                        onApplyManualUrl = {
-                            viewModel.applyManualUrl()
-                            showSetup = false
-                        },
-                        onReset = viewModel::resetStorefront,
-                    )
-                } else if (selected != null) {
-                    AppDetailsScreen(
-                        item = selected,
-                        onBack = { selectedId = null },
-                        onPrimaryAction = { viewModel.onPrimaryAction(selected) },
-                    )
-                } else {
-                    AppListScreen(
-                        state = state,
-                        snackbarHostState = snackbarHostState,
-                        onRefresh = viewModel::refresh,
-                        onPrimaryAction = viewModel::onPrimaryAction,
-                        onOpenDetails = { selectedId = it.id },
-                        onOpenSetup = { showSetup = true },
-                    )
+                // Экран описывается ключом, а не текущими переменными: пока
+                // уходящий экран доигрывает анимацию, он должен рисовать своё
+                // прежнее содержимое, а не то, что уже выбрано.
+                val screen = ScreenKey(
+                    decided = onboarding.decided,
+                    onboarding = onboarding.visible,
+                    setup = showSetup,
+                    detailsId = selectedId.takeIf { selected != null },
+                )
+
+                AnimatedContent(
+                    targetState = screen,
+                    transitionSpec = {
+                        val forward = targetState.depth >= initialState.depth
+                        val shift = if (forward) 1 else -1
+                        (
+                            slideInHorizontally(tween(260)) { width -> shift * width / 6 } +
+                                fadeIn(tween(220))
+                            ) togetherWith (
+                            slideOutHorizontally(tween(260)) { width -> -shift * width / 6 } +
+                                fadeOut(tween(180))
+                            )
+                    },
+                    label = "screen",
+                ) { target ->
+                    when {
+                        !target.decided -> Surface(
+                            modifier = Modifier.fillMaxSize(),
+                            color = MaterialTheme.colorScheme.background,
+                        ) {}
+
+                        target.onboarding -> OnboardingScreen(onStart = viewModel::completeOnboarding)
+
+                        target.setup -> SetupScreen(
+                            state = setupState,
+                            onBack = { showSetup = false },
+                            onAlwaysShowOnboardingChange = viewModel::setAlwaysShowOnboarding,
+                            onLoginChange = viewModel::onLoginChange,
+                            onSearch = viewModel::searchStorefronts,
+                            onChoose = { url, login ->
+                                viewModel.chooseStorefront(url, login)
+                                showSetup = false
+                            },
+                            onManualUrlChange = viewModel::onManualUrlChange,
+                            onApplyManualUrl = {
+                                viewModel.applyManualUrl()
+                                showSetup = false
+                            },
+                            onReset = viewModel::resetStorefront,
+                        )
+
+                        else -> {
+                            val details = target.detailsId?.let { id -> state.items.firstOrNull { it.id == id } }
+                            if (details != null) {
+                                AppDetailsScreen(
+                                    item = details,
+                                    onBack = { selectedId = null },
+                                    onPrimaryAction = { viewModel.onPrimaryAction(details) },
+                                )
+                            } else {
+                                AppListScreen(
+                                    state = state,
+                                    snackbarHostState = snackbarHostState,
+                                    onRefresh = viewModel::refresh,
+                                    onPrimaryAction = viewModel::onPrimaryAction,
+                                    onOpenDetails = { selectedId = it.id },
+                                    onOpenSetup = { showSetup = true },
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
