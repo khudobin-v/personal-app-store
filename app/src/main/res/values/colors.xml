@@ -2,5 +2,6 @@
 <resources>
     <!-- Канвас системы оформления: тот же #FBF8F7/#010102, что в панели. -->
     <color name="window_background">#FBF8F7</color>
-    <color name="ic_launcher_background">#F2A9A0</color>
+    <!-- Фон иконки: тот же зелёный, что на присланной картинке. -->
+    <color name="ic_launcher_background">#08A644</color>
 </resources>
