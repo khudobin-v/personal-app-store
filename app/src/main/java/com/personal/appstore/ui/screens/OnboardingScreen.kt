@@ -59,12 +59,7 @@ import androidx.compose.ui.unit.dp
 import com.personal.appstore.R
 import com.personal.appstore.ui.theme.StoreGreen
 import kotlinx.coroutines.launch
-import kotlin.math.PI
-import kotlin.math.abs
-import kotlin.math.cos
-import kotlin.math.max
 import kotlin.math.roundToInt
-import kotlin.math.sin
 
 /**
  * Приветственный экран: коллаж дроидов, крупный заголовок и слайдер
@@ -111,26 +106,14 @@ fun OnboardingScreen(onStart: () -> Unit) {
 }
 
 /**
- * Какую долю экрана занимает коллаж. Картинка горизонтальная: чем выше полоса,
- * тем сильнее Crop увеличивает фигурки и тем меньше их влезает. 0.45 — та
- * плотность, что на референсе.
+ * Какую долю экрана занимает коллаж. Ниже — под коллажем остаётся голый фон,
+ * выше — Crop раздувает фигурки. 0.62 совпадает с референсом: четыре ряда
+ * заполняют полосу целиком, а под ней сразу заголовок.
  */
-private const val CollageHeightFraction = 0.45f
+private const val CollageHeightFraction = 0.62f
 
-/** Наклон коллажа — как в референсе. */
-private const val CollageRotation = 15f
-
-/**
- * Во сколько раз увеличить повёрнутую картинку, чтобы её углы не заехали в
- * кадр: прямоугольник W × H, повёрнутый на θ, накрывает исходный, если его
- * масштабировать в `max((W·cosθ + H·sinθ)/W, (W·sinθ + H·cosθ)/H)` раз.
- */
-private fun coverScale(width: Float, height: Float, degrees: Float): Float {
-    val rad = degrees * PI.toFloat() / 180f
-    val c = abs(cos(rad))
-    val s = abs(sin(rad))
-    return max((width * c + height * s) / width, (width * s + height * c) / height)
-}
+/** Наклон коллажа — как в референсе, против часовой стрелки. */
+private const val CollageRotation = -15f
 
 /**
  * Коллаж — готовая картинка `res/drawable-nodpi/onboarding_collage.webp`,
@@ -149,20 +132,19 @@ private fun DroidCollage(modifier: Modifier = Modifier) {
             alignment = Alignment.TopCenter,
             modifier = Modifier
                 .fillMaxSize()
-                .graphicsLayer {
-                    val cover = coverScale(size.width, size.height, CollageRotation)
-                    rotationZ = CollageRotation
-                    scaleX = cover
-                    scaleY = cover
-                },
+                .graphicsLayer { rotationZ = CollageRotation },
         )
+        // Растворяем картинку в фоне с обеих сторон: сверху — чтобы обрез не
+        // упирался в строку статуса, снизу — чтобы не спорил с заголовком.
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        0.78f to Color.Transparent,
-                        0.98f to background,
+                        0f to background,
+                        0.12f to Color.Transparent,
+                        0.80f to Color.Transparent,
+                        1f to background,
                     ),
                 ),
         )

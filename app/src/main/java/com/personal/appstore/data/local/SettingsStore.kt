@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.personal.appstore.StoreConfig
 import kotlinx.coroutines.flow.Flow
@@ -61,6 +62,18 @@ class SettingsStore(private val context: Context) {
         }
     }
 
+    /**
+     * Об этих версиях уже уведомляли: ключи вида `packageName:versionCode`.
+     * Нужно, чтобы фоновая проверка не повторяла одно и то же уведомление на
+     * каждом круге.
+     */
+    suspend fun notifiedUpdates(): Set<String> =
+        context.settingsDataStore.data.first()[KEY_NOTIFIED_UPDATES].orEmpty()
+
+    suspend fun setNotifiedUpdates(keys: Set<String>) {
+        context.settingsDataStore.edit { prefs -> prefs[KEY_NOTIFIED_UPDATES] = keys }
+    }
+
     suspend fun setOnboardingSeen() {
         context.settingsDataStore.edit { prefs -> prefs[KEY_ONBOARDING_SEEN] = true }
     }
@@ -74,5 +87,6 @@ class SettingsStore(private val context: Context) {
         val KEY_GITHUB_LOGIN = stringPreferencesKey("github_login")
         val KEY_ONBOARDING_SEEN = booleanPreferencesKey("onboarding_seen")
         val KEY_ALWAYS_SHOW_ONBOARDING = booleanPreferencesKey("always_show_onboarding")
+        val KEY_NOTIFIED_UPDATES = stringSetPreferencesKey("notified_updates")
     }
 }

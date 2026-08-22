@@ -21,6 +21,12 @@ object StoreConfig {
     /** Периодичность фоновой проверки обновлений. */
     const val UPDATE_CHECK_INTERVAL_HOURS: Long = 6L
 
+    /**
+     * Через сколько после запуска магазина проверить обновления первый раз.
+     * Периодическая работа сама сработает только через [UPDATE_CHECK_INTERVAL_HOURS].
+     */
+    const val FIRST_UPDATE_CHECK_DELAY_MINUTES: Long = 15L
+
     /** Манифест старше этого возраста считается устаревшим (офлайн-режим). */
     const val STALE_AFTER_MILLIS: Long = 24L * 60 * 60 * 1000
 

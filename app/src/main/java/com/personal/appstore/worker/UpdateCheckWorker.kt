@@ -5,7 +5,9 @@ import android.util.Log
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
@@ -40,8 +42,18 @@ class UpdateCheckWorker(
             AppStatusResolver.resolve(app.latest.versionCode, installed) is AppStatus.UpdateAvailable
         }
 
-        if (updatable.isNotEmpty()) {
-            locator.updateNotifier.notifyUpdates(updatable)
+        // Об одной и той же версии уведомляем один раз: проверка ходит по кругу,
+        // а обновиться человек мог решить не сразу.
+        val keys = updatable.map { "${it.id}:${it.latest.versionCode}" }.toSet()
+        val alreadyNotified = locator.settingsStore.notifiedUpdates()
+        val fresh = updatable.filter { "${it.id}:${it.latest.versionCode}" !in alreadyNotified }
+
+        if (fresh.isNotEmpty()) {
+            locator.updateNotifier.notifyUpdates(fresh)
+        }
+        // Пишем ровно текущий набор: установленные обновления уходят из списка сами.
+        if (keys != alreadyNotified) {
+            locator.settingsStore.setNotifiedUpdates(keys)
         }
         return Result.success()
     }
@@ -49,24 +61,41 @@ class UpdateCheckWorker(
     companion object {
         private const val TAG = "UpdateCheckWorker"
         private const val WORK_NAME = "update-check"
+        private const val INITIAL_WORK_NAME = "update-check-initial"
 
         fun schedule(context: Context) {
-            val request = PeriodicWorkRequestBuilder<UpdateCheckWorker>(
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+
+            val periodic = PeriodicWorkRequestBuilder<UpdateCheckWorker>(
                 StoreConfig.UPDATE_CHECK_INTERVAL_HOURS,
                 TimeUnit.HOURS,
             )
-                .setConstraints(
-                    Constraints.Builder()
-                        .setRequiredNetworkType(NetworkType.CONNECTED)
-                        .build(),
-                )
+                .setConstraints(constraints)
                 .setBackoffCriteria(androidx.work.BackoffPolicy.EXPONENTIAL, 30, TimeUnit.MINUTES)
                 .build()
 
-            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+            val workManager = WorkManager.getInstance(context)
+            workManager.enqueueUniquePeriodicWork(
                 WORK_NAME,
                 ExistingPeriodicWorkPolicy.KEEP,
-                request,
+                periodic,
+            )
+
+            // Периодическую работу система ставит на конец первого интервала:
+            // после установки первая проверка была бы только через шесть часов.
+            // Поэтому отдельно гоняем разовую — с задержкой, чтобы уведомление
+            // не прилетело человеку прямо поверх открытого магазина.
+            val initial = OneTimeWorkRequestBuilder<UpdateCheckWorker>()
+                .setConstraints(constraints)
+                .setInitialDelay(StoreConfig.FIRST_UPDATE_CHECK_DELAY_MINUTES, TimeUnit.MINUTES)
+                .build()
+
+            workManager.enqueueUniqueWork(
+                INITIAL_WORK_NAME,
+                ExistingWorkPolicy.KEEP,
+                initial,
             )
         }
     }
